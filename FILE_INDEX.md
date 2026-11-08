@@ -75,6 +75,11 @@
   Prints Table 1 cohort characteristics (age / sex / smoking / comorbidity / labs / vitals / medications /
   severity) by clinical subgroup, plus the entity distribution across types and dimensions.
 
+- `src/paper_experiments/export_entity_dictionary.py`  
+  Exports the four-dimensional entity dictionary from `exp_4dchain_v2_dataset.pkl`: the 182 extraction-stage
+  entities (`entity_data` union) and the 123 modeling-vocab entities (`ent2id` keys), grouped by dimension.
+  Writes `entity_dictionary.json`.
+
 - `src/paper_experiments/generate_figure7.py`  
   Regenerates manuscript Figure 7 (four-dimensional temporal hypergraph structure) from the statistics in its
   constants block: patient count, per-dimension entity counts, hyperedge count, mean active days and window
@@ -122,6 +127,11 @@
 - `docs/paper_supplements_report.md`  
   Consolidated report of the five supplementary analyses (same-readout, SHAP, external confusion matrices, feature-level incremental, decision threshold), with honest caveats and the exact numbers to cite in the manuscript (final post-rollback convention).
 
+- `docs/P1_Task3_多seed重跑结果_2026-09-29.md`  
+  Task 3 (component-blind CSCS severity regression): seed-by-seed results for the 4D-XGB and LR/XGBoost arms,
+  mean ± SD over three seeds, a ten-seed robustness check, CSCS distribution verification, leakage checks, and the
+  exact reproduction protocol behind Table 3b / Figure 3.
+
 - `docs/可复现性数据补全回传.md`  
   Reproducibility data completion report: the component-blind withholding list (5 columns / 18 entities /
   28 severity-derived graph statistics) and the per-seed three-class McNemar test for §4.4 / §4.7.
@@ -129,6 +139,10 @@
 - `docs/论文数据溯源对照表.md`  
   Paper-to-repository provenance table: maps every number in the manuscript data list to its producing script
   and backing result file, with privacy-exclusion notes.
+
+- `docs/实体词典获取说明.md`  
+  Instructions for exporting the four-dimensional entity dictionary (182 extraction-stage + 123 modeling-vocab
+  entities) to `entity_dictionary.json`, including the prefix→dimension mapping and the verified self-check output.
 
 ## Results (paper supplements)
 
@@ -202,6 +216,10 @@
 - `results/final/_cb_withhold_list.json`  
   Component-blind withholding-list check (23 withheld features = 5 severity columns + 18 severity entities), with
   a 205-dimension leak scan over the CSCS-defining quantities.
+
+- `results/final/entity_dictionary.json`  
+  Four-dimensional entity dictionary backing §3.3: the 182 extraction-stage entities and the 123 modeling-vocab
+  entities, grouped by dimension (hist / evidence / treat / severity) with counts.
 
 - `results/final/withholding_list.json`  
   Component-blind withholding list for §4.4: the 5 withheld severity structured columns, the 18 withheld
