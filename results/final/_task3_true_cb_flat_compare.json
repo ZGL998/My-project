@@ -1,0 +1,31 @@
+{
+  "label": "comorb_fixed_cscs",
+  "arms": {
+    "4D 真正component-blind(S+非sev图统计+非sev实体)": {
+      "r2": -0.0132,
+      "r2_sd": 0.1363,
+      "mae": 0.1524,
+      "rmse": 0.1864,
+      "r": 0.2717
+    },
+    "flat-entity(S+非sev实体存在性, 无图统计)": {
+      "r2": -0.0176,
+      "r2_sd": 0.1523,
+      "mae": 0.1534,
+      "rmse": 0.1866,
+      "r": 0.2736
+    },
+    "结构化基线 S-only(扣sev列)": {
+      "r2": -0.086,
+      "r2_sd": 0.1389,
+      "mae": 0.1582,
+      "rmse": 0.1928,
+      "r": 0.2015
+    }
+  },
+  "n_features": {
+    "4D 真正component-blind(S+非sev图统计+非sev实体)": 177,
+    "flat-entity(S+非sev实体存在性, 无图统计)": 129,
+    "结构化基线 S-only(扣sev列)": 24
+  }
+}

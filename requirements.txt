@@ -1,0 +1,35 @@
+# Core dependencies for the paper experiment scripts
+numpy
+pandas
+scipy
+scikit-learn
+xgboost
+torch
+matplotlib
+networkx
+
+# Retrieval / HyperGraphRAG-related runtime dependency
+xinference
+
+# Optional supporting packages used by the vendored HyperGraphRAG component
+accelerate
+aiohttp
+graspologic
+hnswlib
+jsonlines
+nltk
+nano-vectordb
+neo4j
+ollama
+openai
+oracledb
+PyPDF2
+pymilvus
+pymongo
+pymysql
+pyvis
+sqlalchemy
+tenacity
+tiktoken
+transformers
+xxhash

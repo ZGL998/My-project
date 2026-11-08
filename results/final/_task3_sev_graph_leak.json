@@ -1,0 +1,48 @@
+{
+  "a_component_blind": {
+    "r2": 0.3831,
+    "r2_sd": 0.1146,
+    "mae": 0.116,
+    "rmse": 0.1431,
+    "r": 0.6401,
+    "n": 205
+  },
+  "b_minus_sev_graph": {
+    "r2": -0.0304,
+    "r2_sd": 0.1262,
+    "mae": 0.152,
+    "rmse": 0.186,
+    "r": 0.2532,
+    "n": 177
+  },
+  "severity_graph_features_kept": [
+    "severity_unique_entities",
+    "severity_active_days",
+    "severity_first_day",
+    "severity_last_day",
+    "severity_mean_daily_count",
+    "severity_day0_count",
+    "severity_day1_count",
+    "severity_day2_count",
+    "severity_day3_count",
+    "severity_day4_count",
+    "hist_severity_coactive_days",
+    "hist_severity_day0_coactive",
+    "hist_severity_day1_coactive",
+    "hist_severity_day2_coactive",
+    "hist_severity_day3_coactive",
+    "hist_severity_day4_coactive",
+    "evidence_severity_coactive_days",
+    "evidence_severity_day0_coactive",
+    "evidence_severity_day1_coactive",
+    "evidence_severity_day2_coactive",
+    "evidence_severity_day3_coactive",
+    "evidence_severity_day4_coactive",
+    "treat_severity_coactive_days",
+    "treat_severity_day0_coactive",
+    "treat_severity_day1_coactive",
+    "treat_severity_day2_coactive",
+    "treat_severity_day3_coactive",
+    "treat_severity_day4_coactive"
+  ]
+}

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>COPD HyperGraphRAG Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --border: #d9e1ec;
+      --text: #1f2d3d;
+      --muted: #5d6b7a;
+      --primary: #2f6fed;
+      --accent: #ff8a65;
+      --success: #1f9d55;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 100vh;
+    }
+    .topbar {
+      padding: 16px 20px 10px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .topbar p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .meta {
+      display: flex;
+      gap: 12px;
+      padding: 10px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .meta-card {
+      background: #eef3ff;
+      border: 1px solid #d5e1ff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      min-width: 120px;
+    }
+    .meta-card b {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px 0;
+    }
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 10px 10px 0 0;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .tab-btn.active {
+      background: #eef3ff;
+      border-color: #cddaf9;
+      color: var(--primary);
+    }
+    .tab-panel {
+      display: none;
+      padding: 16px 20px 20px;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 360px;
+      gap: 16px;
+      min-height: calc(100vh - 180px);
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(15, 31, 55, 0.04);
+    }
+    .card h2, .card h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+    .card h3 {
+      font-size: 14px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .toolbar input, .toolbar select, textarea, .card input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #fff;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    button {
+      border: 1px solid #c7d6ef;
+      background: #fff;
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .graph-wrap {
+      position: relative;
+      height: calc(100vh - 240px);
+      min-height: 620px;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #fbfcff;
+      border: 1px solid var(--border);
+    }
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #graphCanvas.dragging {
+      cursor: grabbing;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .detail-item {
+      background: #f7f9fc;
+      border: 1px solid #e6edf7;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+    }
+    .detail-item b {
+      display: block;
+      margin-bottom: 6px;
+      color: #2e3b4e;
+    }
+    .node-results {
+      max-height: 180px;
+      overflow: auto;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .node-result {
+      padding: 8px 10px;
+      border-bottom: 1px solid #edf1f7;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .node-result:last-child {
+      border-bottom: 0;
+    }
+    .node-result:hover {
+      background: #f5f8ff;
+    }
+    .table-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+    .table-box {
+      max-height: calc(100vh - 280px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eef2f7;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #f8fbff;
+      z-index: 1;
+    }
+    tr:hover td {
+      background: #f9fbff;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: var(--primary);
+      font-size: 12px;
+      margin: 0 6px 6px 0;
+    }
+    details {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      margin-bottom: 10px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .result-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .score {
+      color: var(--success);
+      font-weight: 700;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .loading {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    @media (max-width: 1280px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      .table-layout {
+        grid-template-columns: 1fr;
+      }
+      .graph-wrap {
+        height: 70vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <h1>COPD HyperGraphRAG Dashboard</h1>
+      <p>支持 Neo4j 风格图谱探索、病例表格分析和相似病例推荐问答。</p>
+    </div>
+    <div class="meta" id="metaBar"></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="graph">图谱探索</button>
+      <button class="tab-btn" data-tab="tables">表格分析</button>
+      <button class="tab-btn" data-tab="similar">相似病例推荐</button>
+    </div>
+
+    <section class="tab-panel active" id="tab-graph">
+      <div class="panel-grid">
+        <div class="card">
+          <h2>图谱控制</h2>
+          <div class="toolbar">
+            <input id="nodeSearchInput" placeholder="搜索节点，例如 COPD、慢性阻塞性肺病、HYP_" />
+            <div class="row">
+              <input id="graphHops" type="number" min="1" max="3" value="1" />
+              <input id="graphMaxNodes" type="number" min="40" max="300" value="120" />
+            </div>
+            <button id="searchNodeBtn" class="primary">按节点展开</button>
+            <button id="loadSampleBtn">加载高连接采样图</button>
+            <button id="resetGraphViewBtn">重置视图</button>
+          </div>
+          <div class="hint">
+            - 滚轮缩放，拖动画布平移。<br />
+            - 拖拽节点可手动整理布局。<br />
+            - 单击节点查看详情，双击节点自动展开 1 跳邻居。<br />
+            - 图中菱形节点代表超边，圆点代表实体。
+          </div>
+          <div class="node-results" id="nodeResults"></div>
+        </div>
+
+        <div class="card">
+          <h2>交互图谱</h2>
+          <div class="graph-wrap">
+            <canvas id="graphCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>节点/边详情</h2>
+          <div id="graphStats" class="detail-grid"></div>
+          <div id="detailPanel" class="detail-grid" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-tables">
+      <div class="table-layout">
+        <div class="card">
+          <h2>病例总览</h2>
+          <div class="toolbar">
+            <input id="caseFilterInput" placeholder="筛选病例 ID / 诊断 / 年龄 / 性别" />
+          </div>
+          <div class="table-box">
+            <table id="casesTable">
+              <thead>
+                <tr>
+                  <th>病例ID</th>
+                  <th>主诊断</th>
+                  <th>性别/年龄</th>
+                  <th>超边数</th>
+                  <th>四维链</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h2>病例明细</h2>
+          <div id="caseDetailPanel" class="hint">点击左侧病例行以查看四维链和超边明细。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-similar">
+      <div class="table-layout">
+        <div class="card">
+          <h2>输入检索条件</h2>
+          <div class="toolbar">
+            <input id="diagnosisInput" placeholder="可选：主诊断，例如 慢性阻塞性肺病" />
+            <textarea id="historyChainInput" rows="8" placeholder="请输入病例病史链，例如：长期吸烟史 50 年，活动后气短 3 月，合并糖尿病和高血压..."></textarea>
+            <textarea id="evidenceChainInput" rows="8" placeholder="请输入病例证据链，例如：胸部 HRCT 提示肺气肿、肺大泡，肺功能提示轻度阻塞性通气功能障碍，中度弥散功能障碍..."></textarea>
+            <textarea id="extraNoteInput" rows="4" placeholder="可选：补充说明，例如治疗关注点、严重度、出院结局等"></textarea>
+            <div class="row">
+              <input id="topKInput" type="number" min="1" max="10" value="5" />
+              <button id="similarSearchBtn" class="primary">检索相似病例 Top K</button>
+            </div>
+          </div>
+          <div class="hint">
+            推荐优先使用 Xinference embedding 对病例四维链画像进行语义匹配；若 embedding 不可用，会自动回退到词项相似度检索。
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>推荐结果</h2>
+          <div id="similarStatus" class="hint">提交检索条件后，这里会显示相似病例排名、推荐理由和四维链摘要。</div>
+          <div id="similarResults"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      meta: null,
+      graph: { nodes: [], edges: [], selectedNode: null, selectedEdge: null, centerNode: "", scale: 220, offsetX: 0, offsetY: 0 },
+      cases: [],
+      filteredCases: [],
+      dragNodeId: null,
+      panning: false,
+      lastPointer: null,
+    };
+
+    const canvas = document.getElementById("graphCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function setCanvasSize() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      drawGraph();
+    }
+
+    function apiGet(path) {
+      return fetch(path).then((res) => res.json());
+    }
+
+    function apiPost(path, payload) {
+      return fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then((res) => res.json());
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabName));
+      document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === `tab-${tabName}`));
+      if (tabName === "graph") {
+        setTimeout(setCanvasSize, 0);
+      }
+    }
+
+    function renderMeta(meta) {
+      const container = document.getElementById("metaBar");
+      container.innerHTML = `
+        <div class="meta-card"><b>${meta.graph.nodes}</b><span>图节点</span></div>
+        <div class="meta-card"><b>${meta.graph.edges}</b><span>图边</span></div>
+        <div class="meta-card"><b>${meta.cases}</b><span>病例数</span></div>
+        <div class="meta-card"><b>${meta.hyperedges}</b><span>超边数</span></div>
+      `;
+    }
+
+    function worldToScreen(node) {
+      return {
+        x: canvas.clientWidth / 2 + node.x * state.graph.scale + state.graph.offsetX,
+        y: canvas.clientHeight / 2 + node.y * state.graph.scale + state.graph.offsetY,
+      };
+    }
+
+    function screenToWorld(x, y) {
+      return {
+        x: (x - canvas.clientWidth / 2 - state.graph.offsetX) / state.graph.scale,
+        y: (y - canvas.clientHeight / 2 - state.graph.offsetY) / state.graph.scale,
+      };
+    }
+
+    function fitGraphView() {
+      if (!state.graph.nodes.length) return;
+      const xs = state.graph.nodes.map((n) => n.x);
+      const ys = state.graph.nodes.map((n) => n.y);
+      const width = Math.max(...xs) - Math.min(...xs) || 1;
+      const height = Math.max(...ys) - Math.min(...ys) || 1;
+      const scaleX = (canvas.clientWidth * 0.72) / width;
+      const scaleY = (canvas.clientHeight * 0.72) / height;
+      state.graph.scale = Math.max(80, Math.min(300, Math.min(scaleX, scaleY)));
+      state.graph.offsetX = 0;
+      state.graph.offsetY = 0;
+    }
+
+    function nodeRadius(node) {
+      return node.kind === "hyperedge" ? 12 : 7 + Math.min(10, node.degree * 0.4);
+    }
+
+    function drawGraph() {
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      ctx.fillStyle = "#fbfcff";
+      ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+      state.graph.edges.forEach((edge) => {
+        const src = state.graph.nodes.find((n) => n.id === edge.source);
+        const tgt = state.graph.nodes.find((n) => n.id === edge.target);
+        if (!src || !tgt) return;
+        const p1 = worldToScreen(src);
+        const p2 = worldToScreen(tgt);
+        ctx.strokeStyle = state.graph.selectedEdge && state.graph.selectedEdge.id === edge.id ? "#ff7043" : "rgba(120, 144, 156, 0.55)";
+        ctx.lineWidth = state.graph.selectedEdge && state.graph.selectedEdge.id === edge.id ? 2.6 : 1.2;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      });
+
+      state.graph.nodes.forEach((node) => {
+        const p = worldToScreen(node);
+        const radius = nodeRadius(node);
+        const selected = state.graph.selectedNode && state.graph.selectedNode.id === node.id;
+        ctx.save();
+        ctx.fillStyle = node.color || "#607d8b";
+        ctx.strokeStyle = selected ? "#ff7043" : "#37474f";
+        ctx.lineWidth = selected ? 3 : 1.2;
+        if (node.kind === "hyperedge") {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y - radius);
+          ctx.lineTo(p.x + radius, p.y);
+          ctx.lineTo(p.x, p.y + radius);
+          ctx.lineTo(p.x - radius, p.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#263238";
+        ctx.font = node.kind === "hyperedge" ? "bold 12px Arial" : "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(node.label.slice(0, 20), p.x, p.y + radius + 14);
+        ctx.restore();
+      });
+    }
+
+    function updateGraphStats(payload) {
+      const stats = payload.stats || {};
+      document.getElementById("graphStats").innerHTML = `
+        <div class="detail-item"><b>当前视图</b>${stats.node_count || 0} 个节点 / ${stats.edge_count || 0} 条边</div>
+        <div class="detail-item"><b>全图规模</b>${stats.total_nodes || 0} 个节点 / ${stats.total_edges || 0} 条边</div>
+        <div class="detail-item"><b>中心节点</b>${payload.center_node || "高连接采样图"}</div>
+      `;
+    }
+
+    function renderDetailPanel(item, type) {
+      const panel = document.getElementById("detailPanel");
+      if (!item) {
+        panel.innerHTML = `<div class="detail-item"><b>提示</b>单击节点或边查看详情。</div>`;
+        return;
+      }
+      if (type === "node") {
+        const data = item.data || {};
+        panel.innerHTML = `
+          <div class="detail-item"><b>节点名称</b>${item.display_name}</div>
+          <div class="detail-item"><b>节点类型</b>${item.kind}</div>
+          <div class="detail-item"><b>实体类别</b>${data.entity_type || "-"}</div>
+          <div class="detail-item"><b>度数</b>${item.degree}</div>
+          <div class="detail-item"><b>来源片段 ID</b>${data.source_id || "-"}</div>
+          <div class="detail-item"><b>描述</b>${data.description || "-"}</div>
+        `;
+      } else {
+        const data = item.data || {};
+        panel.innerHTML = `
+          <div class="detail-item"><b>边标签</b>${item.label || "-"}</div>
+          <div class="detail-item"><b>关键词</b>${data.keywords || "-"}</div>
+          <div class="detail-item"><b>权重</b>${data.weight || "-"}</div>
+          <div class="detail-item"><b>来源片段 ID</b>${data.source_id || "-"}</div>
+          <div class="detail-item"><b>描述</b>${data.description || "-"}</div>
+        `;
+      }
+    }
+
+    async function loadGraph(params = {}) {
+      const query = new URLSearchParams({
+        max_nodes: params.max_nodes || document.getElementById("graphMaxNodes").value || 120,
+        hops: params.hops || document.getElementById("graphHops").value || 1,
+        center: params.center || "",
+        mode: params.mode || "sample",
+      });
+      const payload = await apiGet(`/api/graph?${query.toString()}`);
+      state.graph.nodes = payload.nodes || [];
+      state.graph.edges = payload.edges || [];
+      state.graph.selectedNode = null;
+      state.graph.selectedEdge = null;
+      fitGraphView();
+      updateGraphStats(payload);
+      renderDetailPanel(null, "");
+      drawGraph();
+    }
+
+    function findNodeAt(x, y) {
+      for (let i = state.graph.nodes.length - 1; i >= 0; i -= 1) {
+        const node = state.graph.nodes[i];
+        const p = worldToScreen(node);
+        const radius = nodeRadius(node) + 4;
+        const dx = x - p.x;
+        const dy = y - p.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+          return node;
+        }
+      }
+      return null;
+    }
+
+    function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+      const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+      if (l2 === 0) return Math.hypot(px - x1, py - y1);
+      let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      const projX = x1 + t * (x2 - x1);
+      const projY = y1 + t * (y2 - y1);
+      return Math.hypot(px - projX, py - projY);
+    }
+
+    function findEdgeAt(x, y) {
+      for (let i = state.graph.edges.length - 1; i >= 0; i -= 1) {
+        const edge = state.graph.edges[i];
+        const src = state.graph.nodes.find((n) => n.id === edge.source);
+        const tgt = state.graph.nodes.find((n) => n.id === edge.target);
+        if (!src || !tgt) continue;
+        const p1 = worldToScreen(src);
+        const p2 = worldToScreen(tgt);
+        if (pointToSegmentDistance(x, y, p1.x, p1.y, p2.x, p2.y) < 6) {
+          return edge;
+        }
+      }
+      return null;
+    }
+
+    async function searchNodes(query) {
+      const payload = await apiGet(`/api/search-nodes?q=${encodeURIComponent(query)}`);
+      const box = document.getElementById("nodeResults");
+      if (!payload.rows.length) {
+        box.innerHTML = `<div class="node-result muted">未匹配到节点</div>`;
+        return;
+      }
+      box.innerHTML = payload.rows.map((row) => `
+        <div class="node-result" data-name="${row.display_name}">
+          <b>${row.display_name}</b><br />
+          <span class="muted">${row.kind}</span>
+        </div>
+      `).join("");
+      box.querySelectorAll(".node-result[data-name]").forEach((item) => {
+        item.addEventListener("click", () => {
+          document.getElementById("nodeSearchInput").value = item.dataset.name;
+          loadGraph({ center: item.dataset.name, mode: "ego" });
+        });
+      });
+    }
+
+    function renderCasesTable(rows) {
+      const tbody = document.querySelector("#casesTable tbody");
+      tbody.innerHTML = rows.map((row) => `
+        <tr data-case-id="${row.case_id}">
+          <td>${row.case_id}</td>
+          <td>${row.diagnosis || "-"}</td>
+          <td>${row.gender || "-"} / ${row.age || "-"}</td>
+          <td>${row.hyperedge_count}</td>
+          <td>病史 ${row.history_count} / 证据 ${row.evidence_count} / 诊疗 ${row.care_count} / 严重度 ${row.severity_count}</td>
+        </tr>
+      `).join("");
+      tbody.querySelectorAll("tr").forEach((row) => {
+        row.addEventListener("click", () => loadCaseDetail(row.dataset.caseId));
+      });
+    }
+
+    function renderChainSection(title, rows) {
+      const sections = rows.map((item) => `
+        <details>
+          <summary>${item.relation_type} | ${item.summary || item.hyperedge_id}</summary>
+          <div class="detail-item"><b>超边ID</b>${item.hyperedge_id}</div>
+          <div class="detail-item"><b>时间信息</b>${(item.time_info || []).map((t) => `${t.key}=${t.value}`).join("；") || "-"}</div>
+          <div class="detail-item"><b>涉及实体</b>${(item.entities || []).map((e) => `<span class="pill">${e.entity_type}: ${e.name}</span>`).join("") || "-"}</div>
+          <div class="detail-item"><b>证据片段</b>${(item.evidence_fragments || []).map((text) => `<div style="margin-bottom:6px;">${text}</div>`).join("") || "-"}</div>
+        </details>
+      `).join("");
+      return `
+        <div style="margin-bottom:12px;">
+          <h3>${title}</h3>
+          ${sections || '<div class="hint">暂无内容</div>'}
+        </div>
+      `;
+    }
+
+    async function loadCaseDetail(caseId) {
+      const detail = await apiGet(`/api/case?case_id=${encodeURIComponent(caseId)}`);
+      const panel = document.getElementById("caseDetailPanel");
+      panel.innerHTML = `
+        <div class="detail-item"><b>病例ID</b>${detail.case_id}</div>
+        <div class="detail-item"><b>主诊断</b>${detail.diagnosis || "-"}</div>
+        <div class="detail-item"><b>基本信息</b>${detail.gender || "-"} / ${detail.age || "-"}</div>
+        <div class="detail-item"><b>高频实体</b>${(detail.top_entities || []).map((item) => `<span class="pill">${item.name} (${item.count})</span>`).join("") || "-"}</div>
+        <div class="detail-item"><b>关系类型分布</b>${Object.entries(detail.relation_type_counts || {}).map(([key, value]) => `<span class="pill">${key}: ${value}</span>`).join("") || "-"}</div>
+        ${renderChainSection("病史链", detail.chains.history_chain || [])}
+        ${renderChainSection("证据链", detail.chains.evidence_chain || [])}
+        ${renderChainSection("诊疗链", detail.chains.care_chain || [])}
+        ${renderChainSection("严重度链", detail.chains.severity_chain || [])}
+      `;
+    }
+
+    async function loadCases() {
+      const payload = await apiGet("/api/cases");
+      state.cases = payload.rows || [];
+      state.filteredCases = [...state.cases];
+      renderCasesTable(state.filteredCases);
+    }
+
+    function filterCases(query) {
+      const lowered = query.toLowerCase().trim();
+      state.filteredCases = state.cases.filter((row) => {
+        const joined = `${row.case_id} ${row.diagnosis} ${row.gender} ${row.age}`.toLowerCase();
+        return joined.includes(lowered);
+      });
+      renderCasesTable(state.filteredCases);
+    }
+
+    function renderSimilarResults(payload) {
+      const status = document.getElementById("similarStatus");
+      const container = document.getElementById("similarResults");
+      status.innerHTML = `
+        <div class="detail-item"><b>检索策略</b>${payload.strategy}</div>
+        <div class="detail-item"><b>查询画像</b>${payload.query_text || "-"}</div>
+        ${payload.embedding_error ? `<div class="detail-item"><b>Embedding 回退原因</b>${payload.embedding_error}</div>` : ""}
+      `;
+      container.innerHTML = (payload.results || []).map((item, index) => `
+        <div class="result-card">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 6px;">Top ${index + 1} | ${item.case_id}</h3>
+              <div class="muted">${item.diagnosis || "-"} | ${item.gender || "-"} / ${item.age || "-"}</div>
+            </div>
+            <div class="score">综合相似度 ${item.score}</div>
+          </div>
+          <div class="detail-item" style="margin-top:10px;">
+            <b>推荐理由</b>
+            ${(item.reasons || []).map((reason) => `<div style="margin-bottom:6px;">- ${reason}</div>`).join("")}
+          </div>
+          <div class="detail-item">
+            <b>得分拆解</b>Embedding ${item.embedding_score} | Lexical ${item.lexical_score}
+          </div>
+          ${Object.entries(item.chain_overview || {}).map(([bucket, rows]) => `
+            <details>
+              <summary>${bucket === "history_chain" ? "病史链" : bucket === "evidence_chain" ? "证据链" : bucket === "care_chain" ? "诊疗链" : "严重度链"} (${item.chain_counts[bucket] || 0})</summary>
+              ${(rows || []).map((row) => `
+                <div class="detail-item" style="margin-top:8px;">
+                  <b>${row.relation_type} | ${row.summary || row.hyperedge_id}</b>
+                  ${row.evidence_preview || "-"}
+                </div>
+              `).join("") || '<div class="hint">暂无内容</div>'}
+            </details>
+          `).join("")}
+        </div>
+      `).join("");
+    }
+
+    async function runSimilarSearch() {
+      const payload = {
+        diagnosis: document.getElementById("diagnosisInput").value,
+        history_chain: document.getElementById("historyChainInput").value,
+        evidence_chain: document.getElementById("evidenceChainInput").value,
+        extra_note: document.getElementById("extraNoteInput").value,
+        top_k: Number(document.getElementById("topKInput").value || 5),
+      };
+      document.getElementById("similarStatus").innerHTML = `<div class="loading">正在检索相似病例...</div>`;
+      document.getElementById("similarResults").innerHTML = "";
+      const result = await apiPost("/api/similar-cases", payload);
+      renderSimilarResults(result);
+    }
+
+    function bindGraphEvents() {
+      canvas.addEventListener("mousedown", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const node = findNodeAt(x, y);
+        state.lastPointer = { x, y };
+        if (node) {
+          state.dragNodeId = node.id;
+          state.graph.selectedNode = node;
+          state.graph.selectedEdge = null;
+          renderDetailPanel(node, "node");
+        } else {
+          state.panning = true;
+          state.graph.selectedEdge = findEdgeAt(x, y);
+          if (state.graph.selectedEdge) {
+            state.graph.selectedNode = null;
+            renderDetailPanel(state.graph.selectedEdge, "edge");
+          }
+        }
+        canvas.classList.add("dragging");
+        drawGraph();
+      });
+
+      canvas.addEventListener("mousemove", (event) => {
+        if (!state.lastPointer) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const dx = x - state.lastPointer.x;
+        const dy = y - state.lastPointer.y;
+        state.lastPointer = { x, y };
+
+        if (state.dragNodeId) {
+          const node = state.graph.nodes.find((item) => item.id === state.dragNodeId);
+          if (node) {
+            const world = screenToWorld(x, y);
+            node.x = world.x;
+            node.y = world.y;
+            drawGraph();
+          }
+        } else if (state.panning) {
+          state.graph.offsetX += dx;
+          state.graph.offsetY += dy;
+          drawGraph();
+        }
+      });
+
+      window.addEventListener("mouseup", () => {
+        state.dragNodeId = null;
+        state.panning = false;
+        state.lastPointer = null;
+        canvas.classList.remove("dragging");
+      });
+
+      canvas.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const before = screenToWorld(x, y);
+        state.graph.scale = Math.max(60, Math.min(500, state.graph.scale * (event.deltaY < 0 ? 1.08 : 0.92)));
+        const after = screenToWorld(x, y);
+        state.graph.offsetX += (after.x - before.x) * state.graph.scale;
+        state.graph.offsetY += (after.y - before.y) * state.graph.scale;
+        drawGraph();
+      }, { passive: false });
+
+      canvas.addEventListener("dblclick", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const node = findNodeAt(event.clientX - rect.left, event.clientY - rect.top);
+        if (node) {
+          document.getElementById("nodeSearchInput").value = node.display_name;
+          loadGraph({ center: node.display_name, mode: "ego" });
+        }
+      });
+    }
+
+    function bindUI() {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+      });
+      document.getElementById("searchNodeBtn").addEventListener("click", () => {
+        loadGraph({
+          center: document.getElementById("nodeSearchInput").value,
+          mode: "ego",
+        });
+      });
+      document.getElementById("loadSampleBtn").addEventListener("click", () => loadGraph({ mode: "sample" }));
+      document.getElementById("resetGraphViewBtn").addEventListener("click", () => {
+        fitGraphView();
+        drawGraph();
+      });
+      document.getElementById("nodeSearchInput").addEventListener("input", (event) => {
+        const query = event.target.value.trim();
+        if (query.length >= 2) {
+          searchNodes(query);
+        } else {
+          document.getElementById("nodeResults").innerHTML = "";
+        }
+      });
+      document.getElementById("caseFilterInput").addEventListener("input", (event) => filterCases(event.target.value));
+      document.getElementById("similarSearchBtn").addEventListener("click", runSimilarSearch);
+      window.addEventListener("resize", setCanvasSize);
+    }
+
+    async function init() {
+      bindUI();
+      bindGraphEvents();
+      state.meta = await apiGet("/api/meta");
+      renderMeta(state.meta);
+      await Promise.all([loadGraph({ mode: "sample" }), loadCases()]);
+      renderDetailPanel(null, "");
+      setCanvasSize();
+    }
+
+    init();
+  </script>
+</body>
+</html>

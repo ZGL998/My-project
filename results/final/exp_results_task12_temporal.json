@@ -1,0 +1,65 @@
+{
+  "task_results": {
+    "4d_hypergraph": {
+      "cls": {
+        "accuracy": 0.3956043956043956,
+        "precision_weighted": 0.4130774203172393,
+        "recall_weighted": 0.3956043956043956,
+        "macro_f1": 0.34076087564459656,
+        "weighted_f1": 0.40053228425321447
+      },
+      "bin": {
+        "auc_roc": 0.6108333333333333,
+        "auc_pr": 0.8844282008864417,
+        "sensitivity": 0.8933333333333333,
+        "specificity": 0.125
+      }
+    },
+    "lr_xgboost": {
+      "cls": {
+        "accuracy": 0.45054945054945056,
+        "precision_weighted": 0.4812623274161736,
+        "recall_weighted": 0.45054945054945056,
+        "macro_f1": 0.38160523868874513,
+        "weighted_f1": 0.45480900487132314
+      },
+      "bin": {
+        "auc_roc": 0.6266666666666667,
+        "auc_pr": 0.8901787129032573,
+        "sensitivity": 0.8933333333333333,
+        "specificity": 0.1875
+      }
+    },
+    "lrraw": {
+      "cls": {
+        "accuracy": 0.4065934065934066,
+        "precision_weighted": 0.42656580303639124,
+        "recall_weighted": 0.4065934065934066,
+        "macro_f1": 0.39093701996927804,
+        "weighted_f1": 0.4113620634357961
+      },
+      "bin": {
+        "auc_roc": 0.6399999999999999,
+        "auc_pr": 0.9059955069802099,
+        "sensitivity": 0.8533333333333334,
+        "specificity": 0.25
+      }
+    }
+  },
+  "split_info": {
+    "train_n": 162,
+    "test_n": 91,
+    "cutoff_date": "2024-10-22",
+    "train_cls_counts": {
+      "0": 38,
+      "1": 61,
+      "2": 63
+    },
+    "test_cls_counts": {
+      "0": 16,
+      "1": 28,
+      "2": 47
+    }
+  },
+  "note": "temporal validation：按入院时间切分，早期训练、后期测试"
+}

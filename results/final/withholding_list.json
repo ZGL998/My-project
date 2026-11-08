@@ -1,0 +1,71 @@
+{
+  "withheld_columns": [
+    "sev_FEV1_pct",
+    "sev_GOLD",
+    "sev_mMRC",
+    "sev_SpO2_min",
+    "sev_PaCO2_hi"
+  ],
+  "withheld_severity_entities": [
+    "score::exacerbation_frequent",
+    "score::exacerbation_once",
+    "score::gold_1",
+    "score::gold_2",
+    "score::gold_3",
+    "score::gold_4",
+    "score::mmrc_0",
+    "score::mmrc_1",
+    "score::mmrc_2",
+    "score::mmrc_3",
+    "score::spo2_low",
+    "score::spo2_ok",
+    "sev::bp_high",
+    "sev::paco2_high",
+    "sev::pao2_rec",
+    "sev::resp_failure",
+    "sev::sixmwt_ok",
+    "sev::spo2_low"
+  ],
+  "severity_derived_stats": [
+    "severity_unique_entities",
+    "severity_active_days",
+    "severity_first_day",
+    "severity_last_day",
+    "severity_mean_daily_count",
+    "severity_day0_count",
+    "severity_day1_count",
+    "severity_day2_count",
+    "severity_day3_count",
+    "severity_day4_count",
+    "hist_severity_coactive_days",
+    "hist_severity_day0_coactive",
+    "hist_severity_day1_coactive",
+    "hist_severity_day2_coactive",
+    "hist_severity_day3_coactive",
+    "hist_severity_day4_coactive",
+    "evidence_severity_coactive_days",
+    "evidence_severity_day0_coactive",
+    "evidence_severity_day1_coactive",
+    "evidence_severity_day2_coactive",
+    "evidence_severity_day3_coactive",
+    "evidence_severity_day4_coactive",
+    "treat_severity_coactive_days",
+    "treat_severity_day0_coactive",
+    "treat_severity_day1_coactive",
+    "treat_severity_day2_coactive",
+    "treat_severity_day3_coactive",
+    "treat_severity_day4_coactive"
+  ],
+  "_meta": {
+    "n_withheld_columns": 5,
+    "n_withheld_severity_entities": 18,
+    "n_severity_derived_stats": 28,
+    "severity_entity_type_breakdown": {
+      "score": 12,
+      "sev": 6
+    },
+    "note": "severity 实体按 typed-tuple (type, name) 计为 18 个（score 12 + sev 6）；其中 spo2_low 在 score 与 sev 各出现一次，去重后唯一名称为 17 个。component-blind 扣留全部 score/sev 实体。",
+    "source_dataset": "hg_fix_run/exp_4dchain_v2_dataset.pkl",
+    "source_28_stats": "hg_fix_run/probes/_task3_sev_graph_leak.json"
+  }
+}

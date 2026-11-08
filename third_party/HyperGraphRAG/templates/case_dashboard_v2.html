@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HyperGraphRAG Multi-Disease Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --border: #d9e1ec;
+      --text: #1f2d3d;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --accent: #ff8a65;
+      --success: #16a34a;
+      --danger: #e11d48;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); }
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto auto auto 1fr; }
+    .topbar, .controls, .tabs { background: var(--panel); border-bottom: 1px solid var(--border); }
+    .topbar { padding: 16px 20px 10px; }
+    .topbar h1 { margin: 0; font-size: 24px; }
+    .topbar p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 10px 20px; }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .meta-card { background: #eef3ff; border: 1px solid #dbe6ff; border-radius: 10px; padding: 8px 12px; min-width: 120px; }
+    .meta-card b { display: block; font-size: 18px; margin-bottom: 3px; }
+    .meta-card span { color: var(--muted); font-size: 12px; }
+    select, input, textarea, button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #fff;
+      font-family: inherit;
+    }
+    button { cursor: pointer; font-weight: 600; }
+    button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.secondary { background: #eef3ff; color: var(--primary); border-color: #dbe6ff; }
+    .tabs { display: flex; gap: 8px; padding: 12px 20px 0; }
+    .tab-btn { border-radius: 10px 10px 0 0; background: #fff; color: var(--muted); }
+    .tab-btn.active { background: #eef3ff; color: var(--primary); border-color: #dbe6ff; }
+    .panel { display: none; padding: 16px 20px 20px; }
+    .panel.active { display: block; }
+    .grid-3 { display: grid; grid-template-columns: 320px 1fr 360px; gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+    .grid-similar { display: grid; grid-template-columns: 40% 60%; gap: 16px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(15, 31, 55, 0.04);
+    }
+    .card h2, .card h3 { margin: 0 0 12px; }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card-header h2 { margin: 0; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .toolbar.full-width { display: block; }
+    .toolbar.full-width input { width: 100%; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+    .similar-form {
+      display: grid;
+      grid-template-rows: repeat(6, minmax(52px, auto));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .similar-form > * { width: 100%; }
+    .similar-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .detail-grid { display: grid; gap: 10px; }
+    .detail-item { background: #f8fafc; border: 1px solid #e7edf5; border-radius: 10px; padding: 10px; font-size: 13px; }
+    .detail-item b { display: block; margin-bottom: 6px; }
+    .detail-scroll {
+      max-height: calc(100vh - 310px);
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .detail-scroll::-webkit-scrollbar,
+    .result-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .detail-scroll::-webkit-scrollbar-thumb,
+    .result-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    .pill { display: inline-block; background: #eef3ff; color: var(--primary); border-radius: 999px; padding: 3px 8px; font-size: 12px; margin: 0 6px 6px 0; }
+    .graph-wrap { height: calc(100vh - 255px); min-height: 620px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fbfcff; }
+    #graphCanvas { width: 100%; height: 100%; display: block; cursor: grab; }
+    #graphCanvas.dragging { cursor: grabbing; }
+    .node-results, .compare-scroll, .table-box { border: 1px solid var(--border); border-radius: 12px; background: #fff; overflow: auto; }
+    .node-results { max-height: 220px; }
+    .node-result { padding: 8px 10px; border-bottom: 1px solid #eef2f7; cursor: pointer; }
+    .node-result:hover { background: #f6f9ff; }
+    .node-result:last-child { border-bottom: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #eef2f7; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f8fbff; z-index: 1; }
+    tr:hover td { background: #f8fbff; }
+    details { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: #fff; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .status-success { color: var(--success); font-weight: 700; }
+    .status-muted { color: var(--muted); }
+    .score { color: var(--success); font-weight: 700; }
+    .compare-table { min-width: 1200px; }
+    .compare-table th:first-child, .compare-table td:first-child { position: sticky; left: 0; background: #f8fbff; z-index: 2; min-width: 150px; }
+    .compare-table td:first-child { background: #fff; z-index: 1; }
+    .export-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .result-scroll {
+      height: calc(100vh - 205px);
+      min-height: 920px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+    .similar-status-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .similar-status-card {
+      background: #f8fafc;
+      border: 1px solid #e7edf5;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .similar-status-card b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .similar-status-content {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .query-profile-card .similar-status-content {
+      max-height: 112px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .query-profile-card .similar-status-content::-webkit-scrollbar {
+      width: 8px;
+    }
+    .query-profile-card .similar-status-content::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    .similar-results-scroll {
+      flex: 0 0 320px;
+      min-height: 300px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .similar-results-scroll::-webkit-scrollbar,
+    .compare-scroll::-webkit-scrollbar,
+    .case-detail-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .similar-results-scroll::-webkit-scrollbar-thumb,
+    .compare-scroll::-webkit-scrollbar-thumb,
+    .case-detail-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    .compare-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+    .compare-section h3 {
+      margin: 0;
+    }
+    .compare-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+    }
+    .case-detail-scroll { max-height: calc(100vh - 320px); overflow-y: auto; padding-right: 6px; }
+    .filter-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .filter-tag {
+      border: 1px solid #dbe6ff;
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .filter-tag.active {
+      background: #eef3ff;
+      color: var(--primary);
+      border-color: #9cbcff;
+    }
+    .similar-prefill {
+      margin-bottom: 12px;
+    }
+    .similar-prefill .row-2 {
+      margin: 8px 0;
+    }
+    .similar-prefill-actions {
+      grid-template-columns: 1fr 1fr;
+    }
+    .textarea-tools {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: -6px;
+      margin-bottom: 2px;
+      flex-wrap: wrap;
+    }
+    .textarea-toggle {
+      border: 0;
+      background: transparent;
+      color: var(--primary);
+      padding: 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .textarea-toggle:hover {
+      text-decoration: underline;
+    }
+    .mode-btn {
+      border: 1px solid #dbe6ff;
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .mode-btn.active {
+      background: #eef3ff;
+      color: var(--primary);
+      border-color: #9cbcff;
+    }
+    .feedback-summary-panel {
+      background: #f8fafc;
+      border: 1px solid #e7edf5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .rating-panel {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #dbe6ff;
+    }
+    .rating-title {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .rating-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .rating-btn {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fff;
+    }
+    .rating-btn.active {
+      background: #eef3ff;
+      color: var(--primary);
+      border-color: #9cbcff;
+    }
+    .rating-note {
+      width: 100%;
+      min-height: 66px;
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+    .loading { color: var(--primary); font-weight: 700; }
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .score-card {
+      background: #f8fafc;
+      border: 1px solid #e7edf5;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .score-card b {
+      display: block;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .mini-list {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .mini-list code {
+      font-size: 12px;
+    }
+    @media (max-width: 1400px) {
+      .grid-3, .grid-2, .grid-similar { grid-template-columns: 1fr; }
+      .graph-wrap { height: 72vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <h1>多疾病相似疾病推荐分析平台</h1>
+      <p>支持慢性 COPD、COPD 急性加重、COPD 感染三套数据集的图谱探索、病例表格分析、相似病例推荐与导出。</p>
+    </div>
+
+    <div class="controls">
+      <label>
+        当前数据集
+        <select id="datasetSelect"></select>
+      </label>
+      <div class="meta" id="metaBar"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="graph">图谱探索</button>
+      <button class="tab-btn" data-tab="tables">表格分析</button>
+      <button class="tab-btn" data-tab="similar">相似病例推荐</button>
+    </div>
+
+    <section class="panel active" id="panel-graph">
+      <div class="grid-3">
+        <div class="card">
+          <h2>图谱控制</h2>
+          <div class="toolbar">
+            <input id="nodeSearchInput" placeholder="搜索节点，例如 COPD、HYPEREDGE、慢性阻塞性肺病" />
+            <div class="row-2">
+              <input id="graphHopsInput" type="number" min="1" max="3" value="1" />
+              <input id="graphMaxNodesInput" type="number" min="20" max="200" value="60" />
+            </div>
+            <button id="graphSearchBtn" class="primary">按节点增量展开</button>
+            <button id="graphLoadSampleBtn">加载采样图</button>
+            <button id="graphClearBtn">清空已展开图</button>
+            <button id="graphFitBtn">适配视图</button>
+          </div>
+          <div class="hint">
+            - 滚轮缩放，空白处拖动画布平移。<br />
+            - 直接拖拽节点可手工整理布局。<br />
+            - 双击节点会在当前图上继续增量展开邻居，而不是重置旧图。<br />
+            - 已展开节点会保留在视图中，更接近 Neo4j Browser 的逐步探索方式。
+          </div>
+          <div class="node-results" id="nodeResults"></div>
+        </div>
+
+        <div class="card">
+          <h2>增量图谱</h2>
+          <div class="graph-wrap">
+            <canvas id="graphCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>图谱详情</h2>
+          <div class="detail-scroll">
+            <div id="graphStats" class="detail-grid"></div>
+            <div id="graphDetailPanel" class="detail-grid" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-tables">
+      <div class="grid-2">
+        <div class="card">
+          <h2>病例总览</h2>
+          <div class="toolbar full-width">
+            <input id="caseFilterInput" placeholder="筛选病例 ID / 诊断 / 年龄 / 性别" />
+          </div>
+          <div class="table-box" style="max-height: calc(100vh - 285px);">
+            <table id="casesTable">
+              <thead>
+                <tr>
+                  <th>病例ID</th>
+                  <th>主诊断</th>
+                  <th>性别/年龄</th>
+                  <th>超边数</th>
+                  <th>四维链</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>病例详情与导出</h2>
+          <div class="export-bar">
+            <button id="exportCaseJsonBtn">导出当前病例 JSON</button>
+            <button id="exportCaseExcelBtn">导出当前病例 Excel</button>
+            <button id="exportCaseWordBtn">导出当前病例 Word</button>
+          </div>
+          <div class="case-detail-scroll">
+            <div id="caseDetailPanel" class="hint">点击左侧病例后，这里将显示四维链详情，并可导出。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-similar">
+      <div class="grid-similar">
+        <div class="card">
+          <div class="card-header">
+            <h2>相似病例检索</h2>
+            <select id="similarDatasetScopeSelect">
+              <option value="all">全库检索</option>
+            </select>
+          </div>
+          <div class="similar-form">
+            <div class="detail-item similar-prefill">
+              <b>测试集病例预填</b>
+              <div class="row-2">
+                <select id="testsetSelect">
+                  <option value="">选择测试集</option>
+                </select>
+                <select id="testcaseSelect" disabled>
+                  <option value="">选择测试病例</option>
+                </select>
+              </div>
+              <div class="similar-actions similar-prefill-actions">
+                <button id="clearSimilarFormBtn" type="button" class="secondary">清空检索表单</button>
+                <button id="refreshFeedbackSummaryBtn" type="button">刷新评分统计</button>
+              </div>
+              <div id="testsetHint" class="hint">选择测试集和测试病例后，会自动把四维链信息填充到下方文本框。</div>
+            </div>
+            <input id="diagnosisInput" placeholder="可选：主诊断，例如 慢性阻塞性肺病" />
+            <textarea id="historyChainInput" rows="7" placeholder="请输入病史链，例如：长期吸烟史 50 年，活动后气短 3 月，合并糖尿病和高血压..."></textarea>
+            <div class="textarea-tools"><button id="historyChainToggle" type="button" class="textarea-toggle">展开病史链</button></div>
+            <textarea id="evidenceChainInput" rows="7" placeholder="请输入证据链，例如：HRCT 提示肺气肿、肺大泡，肺功能提示轻度阻塞性通气功能障碍，中度弥散功能障碍..."></textarea>
+            <div class="textarea-tools">
+              <button id="evidenceChainKeyBtn" type="button" class="mode-btn">仅看关键项</button>
+              <button id="evidenceChainFullBtn" type="button" class="mode-btn">查看全部</button>
+              <button id="evidenceChainToggle" type="button" class="textarea-toggle">展开证据链</button>
+            </div>
+            <textarea id="careChainInput" rows="5" placeholder="可选：请输入诊疗链，例如：住院期间核心用药、关键治疗动作、出院带药与随访安排..."></textarea>
+            <div class="textarea-tools">
+              <button id="careChainKeyBtn" type="button" class="mode-btn">仅看关键项</button>
+              <button id="careChainFullBtn" type="button" class="mode-btn">查看全部</button>
+              <button id="careChainToggle" type="button" class="textarea-toggle">展开诊疗链</button>
+            </div>
+            <textarea id="severityChainInput" rows="5" placeholder="可选：请输入严重度链，例如：分级、中重度证据、并发症负担、功能评分、预后风险..."></textarea>
+            <div class="textarea-tools"><button id="severityChainToggle" type="button" class="textarea-toggle">展开严重度链</button></div>
+            <textarea id="extraNoteInput" rows="4" placeholder="可选：补充说明，例如额外鉴别诊断、关注点、特殊证据等"></textarea>
+            <div class="textarea-tools"><button id="extraNoteToggle" type="button" class="textarea-toggle">展开补充说明</button></div>
+          </div>
+          <div class="similar-actions">
+            <input id="topKInput" type="number" min="1" max="10" value="5" />
+            <button id="similarSearchBtn" class="primary">检索相似病例</button>
+          </div>
+          <div class="hint">
+            会同步检索慢性 COPD、COPD 急性加重、COPD 感染三套数据，并按四维链最终评分统一排序。
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>推荐结果与对比</h2>
+          <div class="export-bar">
+            <button id="exportCompareJsonBtn">导出对比 JSON</button>
+            <button id="exportCompareExcelBtn">导出对比 Excel</button>
+            <button id="exportCompareWordBtn">导出对比 Word</button>
+          </div>
+          <div class="result-scroll">
+            <div id="similarStatus" class="hint">提交查询后，这里会展示检索策略、推荐结果和 Top 5 四维链对比。</div>
+            <div id="feedbackSummaryPanel" class="feedback-summary-panel">人工评分统计摘要会显示在这里，后台同时会生成统计文档。</div>
+            <div class="filter-tags" id="similarResultFilters"></div>
+            <div class="similar-results-scroll">
+              <div id="similarResults"></div>
+            </div>
+            <div class="compare-section">
+              <h3>Top 5 并排病例对比</h3>
+              <div class="compare-scroll">
+                <table class="compare-table" id="compareTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const CHAIN_LABELS = {
+      history_chain: "病史链",
+      evidence_chain: "证据链",
+      care_chain: "诊疗链",
+      severity_chain: "严重度链",
+    };
+    const NODE_COLORS = {
+      hyperedge: { fill: "#fde7d9", stroke: "#f08b54", text: "#8b3a16" },
+      entity: { fill: "#e3f2fd", stroke: "#4e8dd8", text: "#204b78" },
+      disease: { fill: "#dff7e8", stroke: "#31a56b", text: "#17623e" },
+      symptom: { fill: "#f4e8ff", stroke: "#8d5ed2", text: "#55318f" },
+      drug: { fill: "#fff2d6", stroke: "#c9901d", text: "#7a5408" },
+      test: { fill: "#ffe6ef", stroke: "#d4548c", text: "#8a2452" },
+      treatment: { fill: "#dff6f6", stroke: "#1f9d9d", text: "#0f6666" },
+      unknown: { fill: "#eef2f7", stroke: "#8c98a8", text: "#4b5563" },
+    };
+
+    const state = {
+      dataset: "chronic",
+      datasets: [],
+      testsets: [],
+      selectedTestsetId: "",
+      currentTestcase: null,
+      meta: null,
+      cases: [],
+      filteredCases: [],
+      currentCaseDetail: null,
+      lastSimilarResult: null,
+      currentVisibleSimilarResults: [],
+      similarDatasetQuickFilter: "all",
+      ratingDrafts: {},
+      feedbackSummary: null,
+      chainDisplayMode: {
+        evidence_chain: "full",
+        care_chain: "full",
+      },
+      similarFormEdited: {
+        diagnosis: false,
+        history_chain: false,
+        evidence_chain: false,
+        care_chain: false,
+        severity_chain: false,
+        extra_note: false,
+      },
+      suppressSimilarInputTracking: false,
+      graph: {
+        nodes: [],
+        edges: [],
+        nodeMap: new Map(),
+        edgeMap: new Map(),
+        expanded: new Set(),
+        selectedNode: null,
+        selectedEdge: null,
+        scale: 220,
+        offsetX: 0,
+        offsetY: 0,
+      },
+      dragNodeId: null,
+      panning: false,
+      lastPointer: null,
+    };
+
+    const canvas = document.getElementById("graphCanvas");
+    const ctx = canvas.getContext("2d");
+
+    async function parseApiResponse(res) {
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch (error) {
+        const text = await res.text();
+        throw new Error(text || `请求失败: HTTP ${res.status}`);
+      }
+      if (!res.ok || payload?.error) {
+        throw new Error(payload?.error || `请求失败: HTTP ${res.status}`);
+      }
+      return payload;
+    }
+
+    function apiGet(path) {
+      return fetch(path).then(parseApiResponse);
+    }
+
+    function apiPost(path, payload) {
+      return fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(parseApiResponse);
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tab));
+      document.querySelectorAll(".panel").forEach((panel) => panel.classList.toggle("active", panel.id === `panel-${tab}`));
+      if (tab === "graph") {
+        setTimeout(setCanvasSize, 0);
+      }
+    }
+
+    function setCanvasSize() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      drawGraph();
+    }
+
+    function renderMeta(meta) {
+      document.getElementById("metaBar").innerHTML = `
+        <div class="meta-card"><b>${meta.graph.nodes}</b><span>图节点</span></div>
+        <div class="meta-card"><b>${meta.graph.edges}</b><span>图边</span></div>
+        <div class="meta-card"><b>${meta.cases}</b><span>病例数</span></div>
+        <div class="meta-card"><b>${meta.hyperedges}</b><span>超边数</span></div>
+      `;
+    }
+
+    function renderDatasetSelect() {
+      const select = document.getElementById("datasetSelect");
+      select.innerHTML = state.datasets.map((dataset) => `
+        <option value="${dataset.id}" ${dataset.id === state.dataset ? "selected" : ""}>
+          ${dataset.label} | ${dataset.cases} 例
+        </option>
+      `).join("");
+      const scopeSelect = document.getElementById("similarDatasetScopeSelect");
+      const currentValue = scopeSelect.value || "all";
+      scopeSelect.innerHTML = `
+        <option value="all">全库检索</option>
+        ${state.datasets.map((dataset) => `
+          <option value="${dataset.id}">${dataset.label}</option>
+        `).join("")}
+      `;
+      scopeSelect.value = state.datasets.some((dataset) => dataset.id === currentValue) ? currentValue : "all";
+    }
+
+    function worldToScreen(node) {
+      return {
+        x: canvas.clientWidth / 2 + node.x * state.graph.scale + state.graph.offsetX,
+        y: canvas.clientHeight / 2 + node.y * state.graph.scale + state.graph.offsetY,
+      };
+    }
+
+    function screenToWorld(x, y) {
+      return {
+        x: (x - canvas.clientWidth / 2 - state.graph.offsetX) / state.graph.scale,
+        y: (y - canvas.clientHeight / 2 - state.graph.offsetY) / state.graph.scale,
+      };
+    }
+
+    function nodeRadius(node) {
+      return node.kind === "hyperedge" ? 11 + Math.min(5, node.degree * 0.08) : 8 + Math.min(8, node.degree * 0.28);
+    }
+
+    function nodeStyle(node) {
+      const entityType = (node.data?.entity_type || "").toLowerCase();
+      return NODE_COLORS[entityType] || NODE_COLORS[node.kind] || NODE_COLORS.entity;
+    }
+
+    function fitGraphView() {
+      const nodes = Array.from(state.graph.nodeMap.values());
+      if (!nodes.length) return;
+      const xs = nodes.map((n) => n.x);
+      const ys = nodes.map((n) => n.y);
+      const width = Math.max(...xs) - Math.min(...xs) || 1;
+      const height = Math.max(...ys) - Math.min(...ys) || 1;
+      const scaleX = (canvas.clientWidth * 0.72) / width;
+      const scaleY = (canvas.clientHeight * 0.72) / height;
+      state.graph.scale = Math.max(80, Math.min(320, Math.min(scaleX, scaleY)));
+      state.graph.offsetX = 0;
+      state.graph.offsetY = 0;
+    }
+
+    function rebuildGraphArrays() {
+      state.graph.nodes = Array.from(state.graph.nodeMap.values());
+      state.graph.edges = Array.from(state.graph.edgeMap.values());
+    }
+
+    function clearGraphState() {
+      state.graph.nodeMap = new Map();
+      state.graph.edgeMap = new Map();
+      state.graph.nodes = [];
+      state.graph.edges = [];
+      state.graph.expanded = new Set();
+      state.graph.selectedNode = null;
+      state.graph.selectedEdge = null;
+      state.graph.offsetX = 0;
+      state.graph.offsetY = 0;
+    }
+
+    function randomAround(centerNode, index, total) {
+      const angle = (Math.PI * 2 * index) / Math.max(1, total);
+      const radius = 0.35 + (index % 3) * 0.08;
+      return {
+        x: centerNode.x + Math.cos(angle) * radius,
+        y: centerNode.y + Math.sin(angle) * radius,
+      };
+    }
+
+    function mergeGraphPayload(payload, replace = false) {
+      if (replace) {
+        clearGraphState();
+      }
+
+      const centerId = payload.center_node_id || "";
+      const existingCenter = centerId ? state.graph.nodeMap.get(centerId) : null;
+      const newNodes = payload.nodes || [];
+      newNodes.forEach((node, index) => {
+        const existing = state.graph.nodeMap.get(node.id);
+        if (existing) {
+          existing.degree = Math.max(existing.degree, node.degree);
+          existing.data = node.data;
+          existing.kind = node.kind;
+          existing.display_name = node.display_name;
+          existing.label = node.label;
+        } else {
+          const clone = { ...node };
+          if (!replace && existingCenter && node.id !== centerId) {
+            const pos = randomAround(existingCenter, index, newNodes.length);
+            clone.x = pos.x;
+            clone.y = pos.y;
+          }
+          state.graph.nodeMap.set(clone.id, clone);
+        }
+      });
+
+      (payload.edges || []).forEach((edge) => {
+        if (!state.graph.edgeMap.has(edge.id)) {
+          state.graph.edgeMap.set(edge.id, { ...edge });
+        }
+      });
+
+      if (centerId) {
+        state.graph.expanded.add(centerId);
+      }
+
+      rebuildGraphArrays();
+      if (replace) {
+        fitGraphView();
+      }
+      updateGraphStats(payload);
+      drawGraph();
+    }
+
+    function updateGraphStats(payload) {
+      const nodes = state.graph.nodes.length;
+      const edges = state.graph.edges.length;
+      const stats = payload.stats || {};
+      document.getElementById("graphStats").innerHTML = `
+        <div class="detail-item"><b>当前已展开图</b>${nodes} 个节点 / ${edges} 条边</div>
+        <div class="detail-item"><b>全图规模</b>${stats.total_nodes || 0} 个节点 / ${stats.total_edges || 0} 条边</div>
+        <div class="detail-item"><b>已展开中心节点数</b>${state.graph.expanded.size}</div>
+        <div class="detail-item"><b>最近展开中心</b>${payload.center_node || "高连接采样图"}</div>
+      `;
+    }
+
+    function renderGraphDetail(item, type) {
+      const panel = document.getElementById("graphDetailPanel");
+      if (!item) {
+        panel.innerHTML = `<div class="detail-item"><b>提示</b>单击节点或边查看详情。</div>`;
+        return;
+      }
+      if (type === "node") {
+        const data = item.data || {};
+        panel.innerHTML = `
+          <div class="detail-item"><b>节点名称</b>${item.display_name}</div>
+          <div class="detail-item"><b>节点类型</b>${item.kind}</div>
+          <div class="detail-item"><b>实体类别</b>${data.entity_type || "-"}</div>
+          <div class="detail-item"><b>节点度数</b>${item.degree}</div>
+          <div class="detail-item"><b>来源 ID</b>${data.source_id || "-"}</div>
+          <div class="detail-item"><b>描述</b>${data.description || "-"}</div>
+        `;
+      } else {
+        const data = item.data || {};
+        panel.innerHTML = `
+          <div class="detail-item"><b>边标签</b>${item.label || "-"}</div>
+          <div class="detail-item"><b>关键词</b>${data.keywords || "-"}</div>
+          <div class="detail-item"><b>权重</b>${data.weight || "-"}</div>
+          <div class="detail-item"><b>来源 ID</b>${data.source_id || "-"}</div>
+          <div class="detail-item"><b>描述</b>${data.description || "-"}</div>
+        `;
+      }
+    }
+
+    function drawGraph() {
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      ctx.fillStyle = "#fbfcff";
+      ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+      state.graph.edges.forEach((edge) => {
+        const src = state.graph.nodeMap.get(edge.source);
+        const tgt = state.graph.nodeMap.get(edge.target);
+        if (!src || !tgt) return;
+        const p1 = worldToScreen(src);
+        const p2 = worldToScreen(tgt);
+        ctx.strokeStyle = state.graph.selectedEdge && state.graph.selectedEdge.id === edge.id ? "#ff7043" : "rgba(148, 163, 184, 0.48)";
+        ctx.lineWidth = state.graph.selectedEdge && state.graph.selectedEdge.id === edge.id ? 2.8 : 1.1;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      });
+
+      state.graph.nodes.forEach((node) => {
+        const p = worldToScreen(node);
+        const radius = nodeRadius(node);
+        const selected = state.graph.selectedNode && state.graph.selectedNode.id === node.id;
+        const expanded = state.graph.expanded.has(node.id);
+        const style = nodeStyle(node);
+        ctx.save();
+        ctx.shadowColor = "rgba(15, 23, 42, 0.12)";
+        ctx.shadowBlur = selected ? 16 : 10;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = style.fill;
+        ctx.strokeStyle = selected ? "#ef6c3e" : expanded ? "#16a34a" : style.stroke;
+        ctx.lineWidth = selected ? 3 : expanded ? 2.4 : 1.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (node.kind === "hyperedge") {
+          ctx.beginPath();
+          ctx.fillStyle = style.stroke;
+          ctx.arc(p.x, p.y, Math.max(2.5, radius * 0.28), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowColor = "transparent";
+        ctx.fillStyle = style.text;
+        ctx.font = node.kind === "hyperedge" ? "bold 12px Arial" : "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(node.label.slice(0, 24), p.x, p.y + radius + 14);
+        ctx.restore();
+      });
+    }
+
+    function findNodeAt(x, y) {
+      for (let i = state.graph.nodes.length - 1; i >= 0; i -= 1) {
+        const node = state.graph.nodes[i];
+        const p = worldToScreen(node);
+        const radius = nodeRadius(node) + 4;
+        if (Math.hypot(x - p.x, y - p.y) <= radius) return node;
+      }
+      return null;
+    }
+
+    function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+      const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+      if (!l2) return Math.hypot(px - x1, py - y1);
+      let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      const projX = x1 + t * (x2 - x1);
+      const projY = y1 + t * (y2 - y1);
+      return Math.hypot(px - projX, py - projY);
+    }
+
+    function findEdgeAt(x, y) {
+      for (let i = state.graph.edges.length - 1; i >= 0; i -= 1) {
+        const edge = state.graph.edges[i];
+        const src = state.graph.nodeMap.get(edge.source);
+        const tgt = state.graph.nodeMap.get(edge.target);
+        if (!src || !tgt) continue;
+        const p1 = worldToScreen(src);
+        const p2 = worldToScreen(tgt);
+        if (pointToSegmentDistance(x, y, p1.x, p1.y, p2.x, p2.y) < 6) return edge;
+      }
+      return null;
+    }
+
+    async function loadMetaAndDatasetSwitch() {
+      const payload = await apiGet(`/api/meta?dataset=${encodeURIComponent(state.dataset)}`);
+      state.meta = payload;
+      state.datasets = payload.datasets || [];
+      renderDatasetSelect();
+      renderMeta(payload);
+    }
+
+    async function loadGraphSample() {
+      const maxNodes = Number(document.getElementById("graphMaxNodesInput").value || 120);
+      const payload = await apiGet(`/api/graph?dataset=${encodeURIComponent(state.dataset)}&max_nodes=${maxNodes}`);
+      mergeGraphPayload(payload, true);
+      renderGraphDetail(null, "");
+    }
+
+    async function expandGraph(center) {
+      const hops = Number(document.getElementById("graphHopsInput").value || 1);
+      const maxNodes = Number(document.getElementById("graphMaxNodesInput").value || 60);
+      const payload = await apiGet(`/api/graph-expand?dataset=${encodeURIComponent(state.dataset)}&center=${encodeURIComponent(center)}&hops=${hops}&max_nodes=${maxNodes}`);
+      if (!payload.nodes || !payload.nodes.length) return;
+      mergeGraphPayload(payload, false);
+    }
+
+    async function searchNodes(query) {
+      const payload = await apiGet(`/api/search-nodes?dataset=${encodeURIComponent(state.dataset)}&q=${encodeURIComponent(query)}`);
+      const box = document.getElementById("nodeResults");
+      if (!payload.rows.length) {
+        box.innerHTML = `<div class="node-result status-muted">未匹配到节点</div>`;
+        return;
+      }
+      box.innerHTML = payload.rows.map((row) => `
+        <div class="node-result" data-id="${row.id}" data-name="${row.display_name}">
+          <b>${row.display_name}</b><br />
+          <span class="status-muted">${row.kind}</span>
+        </div>
+      `).join("");
+      box.querySelectorAll(".node-result").forEach((item) => {
+        item.addEventListener("click", () => {
+          document.getElementById("nodeSearchInput").value = item.dataset.name;
+          expandGraph(item.dataset.id);
+        });
+      });
+    }
+
+    function renderCasesTable(rows) {
+      const tbody = document.querySelector("#casesTable tbody");
+      tbody.innerHTML = rows.map((row) => `
+        <tr data-case-id="${row.case_id}">
+          <td>${row.case_id}</td>
+          <td>${row.diagnosis || "-"}</td>
+          <td>${row.gender || "-"} / ${row.age || "-"}</td>
+          <td>${row.hyperedge_count}</td>
+          <td>病史 ${row.history_count} / 证据 ${row.evidence_count} / 诊疗 ${row.care_count} / 严重度 ${row.severity_count}</td>
+        </tr>
+      `).join("");
+      tbody.querySelectorAll("tr").forEach((row) => row.addEventListener("click", () => loadCaseDetail(row.dataset.caseId)));
+    }
+
+    function renderChainSection(title, rows) {
+      return `
+        <div style="margin-bottom:12px;">
+          <h3>${title}</h3>
+          ${rows.map((item) => `
+            <details>
+              <summary>${item.relation_type} | ${item.summary || item.hyperedge_id}</summary>
+              <div class="detail-item"><b>超边ID</b>${item.hyperedge_id}</div>
+              <div class="detail-item"><b>时间信息</b>${(item.time_info || []).map((t) => `${t.key}=${t.value}`).join("；") || "-"}</div>
+              <div class="detail-item"><b>涉及实体</b>${(item.entities || []).map((e) => `<span class="pill">${e.entity_type}: ${e.name}</span>`).join("") || "-"}</div>
+              <div class="detail-item"><b>证据片段</b>${(item.evidence_fragments || []).map((text) => `<div style="margin-bottom:6px;">${text}</div>`).join("") || "-"}</div>
+            </details>
+          `).join("") || '<div class="hint">暂无内容</div>'}
+        </div>
+      `;
+    }
+
+    async function loadCases() {
+      const payload = await apiGet(`/api/cases?dataset=${encodeURIComponent(state.dataset)}`);
+      state.cases = payload.rows || [];
+      state.filteredCases = [...state.cases];
+      renderCasesTable(state.filteredCases);
+      document.getElementById("caseDetailPanel").innerHTML = "点击左侧病例后，这里将显示四维链详情，并可导出。";
+      state.currentCaseDetail = null;
+    }
+
+    function filterCases(query) {
+      const q = query.toLowerCase().trim();
+      state.filteredCases = state.cases.filter((row) => `${row.case_id} ${row.diagnosis} ${row.gender} ${row.age}`.toLowerCase().includes(q));
+      renderCasesTable(state.filteredCases);
+    }
+
+    async function loadCaseDetail(caseId) {
+      const detail = await apiGet(`/api/case?dataset=${encodeURIComponent(state.dataset)}&case_id=${encodeURIComponent(caseId)}`);
+      state.currentCaseDetail = detail;
+      document.getElementById("caseDetailPanel").innerHTML = `
+        <div class="detail-item"><b>病例ID</b>${detail.case_id}</div>
+        <div class="detail-item"><b>主诊断</b>${detail.diagnosis || "-"}</div>
+        <div class="detail-item"><b>基本信息</b>${detail.gender || "-"} / ${detail.age || "-"}</div>
+        <div class="detail-item"><b>高频实体</b>${(detail.top_entities || []).map((item) => `<span class="pill">${item.name} (${item.count})</span>`).join("") || "-"}</div>
+        <div class="detail-item"><b>关系类型分布</b>${Object.entries(detail.relation_type_counts || {}).map(([k, v]) => `<span class="pill">${k}: ${v}</span>`).join("") || "-"}</div>
+        ${renderChainSection("病史链", detail.chains.history_chain || [])}
+        ${renderChainSection("证据链", detail.chains.evidence_chain || [])}
+        ${renderChainSection("诊疗链", detail.chains.care_chain || [])}
+        ${renderChainSection("严重度链", detail.chains.severity_chain || [])}
+      `;
+    }
+
+    function renderSimilarResults(payload) {
+      state.lastSimilarResult = payload;
+      renderSimilarFilterTags(payload.results || []);
+      const visibleResults = getVisibleSimilarResults();
+      state.currentVisibleSimilarResults = visibleResults;
+      document.getElementById("similarStatus").innerHTML = `
+        <div class="similar-status-panel">
+          <div class="similar-status-card">
+            <b>检索策略</b>
+            <div class="similar-status-content">${payload.strategy || "-"}</div>
+          </div>
+          <div class="similar-status-card query-profile-card">
+            <b>查询画像</b>
+            <div class="similar-status-content">${payload.query_text || "-"}</div>
+          </div>
+          <div class="similar-status-card">
+            <b>查询诊断标准化</b>
+            <div class="similar-status-content">${summarizeDiagnosisMapping(payload.query_diagnosis_mapping)}</div>
+          </div>
+          <div class="similar-status-card">
+            <b>查询结构化画像</b>
+            <div class="similar-status-content">${summarizeStructuredProfile(payload.query_structured_profile)}</div>
+          </div>
+          <div class="similar-status-card">
+            <b>查询有效画像</b>
+            <div class="similar-status-content">${summarizeStructuredProfile(payload.query_effective_structured_profile)}</div>
+          </div>
+          <div class="similar-status-card">
+            <b>查询去噪说明</b>
+            <div class="similar-status-content">${summarizeDenoiseReport(payload.query_denoise_report)}</div>
+          </div>
+          <div class="similar-status-card">
+            <b>语义链权重计划</b>
+            <div class="similar-status-content">${summarizeWeightPlan(payload.semantic_weight_plan)}</div>
+          </div>
+          ${payload.embedding_error ? `
+            <div class="similar-status-card">
+              <b>Embedding 回退原因</b>
+              <div class="similar-status-content">${payload.embedding_error}</div>
+            </div>
+          ` : ""}
+        </div>
+      `;
+      document.getElementById("similarResults").innerHTML = visibleResults.length ? visibleResults.map((item, index) => `
+        <div class="detail-item" style="margin-bottom:10px;">
+          <b>Top ${index + 1} | ${item.case_id}</b>
+          <div><span class="pill">${item.dataset_label || item.dataset_id || "-"}</span> ${item.diagnosis || "-"} | ${item.gender || "-"} / ${item.age || "-"} | <span class="score">四维链最终评分 ${item.final_score}</span></div>
+          <div class="mini-list">标准化诊断: ${escapeHtml(item.normalized_diagnosis || "-")} | 模板: ${escapeHtml(item.template_hint || "-")} | 家族: ${escapeHtml(item.family_hint || "-")} | 链权重来源: ${escapeHtml(item.weight_source || "-")}</div>
+          <div style="margin-top:6px;">
+            ${(Object.entries(item.chain_scores || {})).map(([bucket, score]) => `
+              <span class="pill">${CHAIN_LABELS[bucket]}: ${score.final}</span>
+            `).join("")}
+            ${item.diagnosis_bonus ? `<span class="pill">诊断加分: ${item.diagnosis_bonus}</span>` : ""}
+          </div>
+          ${renderComponentGrid(item)}
+          <details>
+            <summary>查看结构化与规则解释</summary>
+            <div class="mini-list">
+              候选结构化画像:<br />${summarizeStructuredProfile(item.structured_profile || {})}<br /><br />
+              候选有效画像:<br />${summarizeStructuredProfile(item.effective_structured_profile || {})}<br /><br />
+              查询去噪说明:<br />${summarizeDenoiseReport(item.query_denoise_report)}<br /><br />
+              候选去噪说明:<br />${summarizeDenoiseReport(item.case_denoise_report)}<br /><br />
+              诊断标准化:<br />${summarizeDiagnosisMapping(item.diagnosis_mapping || {})}<br /><br />
+              结构化槽位明细:<br />${renderKeyValueList(Object.fromEntries(Object.entries(item.structured_match?.slot_results || {}).map(([key, value]) => [key, `score=${formatScore(value.score)} | available=${value.available}`])))}<br /><br />
+              规则命中:<br />查询侧 ${renderPillList((item.rule_match?.query_rule_hits || []).map((rule) => `${rule.rule_id}:${formatScore(rule.score)}`), "未命中")}<br />
+              候选侧 ${renderPillList((item.rule_match?.case_rule_hits || []).map((rule) => `${rule.rule_id}:${formatScore(rule.score)}`), "未命中")}
+            </div>
+          </details>
+          <div style="margin-top:8px;">${(item.reasons || []).map((reason) => `<div>- ${reason}</div>`).join("")}</div>
+          ${renderRatingPanel(payload.query_id, item, index)}
+        </div>
+      `).join("") : `<div class="detail-item">当前筛选条件下暂无结果。</div>`;
+      bindRatingPanels();
+      renderCompareTable(visibleResults);
+    }
+
+    function renderSimilarFilterTags(results) {
+      const container = document.getElementById("similarResultFilters");
+      const datasetMap = new Map();
+      results.forEach((item) => {
+        if (!datasetMap.has(item.dataset_id)) {
+          datasetMap.set(item.dataset_id, item.dataset_label || item.dataset_id);
+        }
+      });
+      const tags = [{ id: "all", label: "全部结果" }, ...Array.from(datasetMap.entries()).map(([id, label]) => ({ id, label }))];
+      if (!tags.some((tag) => tag.id === state.similarDatasetQuickFilter)) {
+        state.similarDatasetQuickFilter = "all";
+      }
+      container.innerHTML = tags.map((tag) => `
+        <button type="button" class="filter-tag ${tag.id === state.similarDatasetQuickFilter ? "active" : ""}" data-filter="${tag.id}">
+          ${tag.label}
+        </button>
+      `).join("");
+      container.querySelectorAll(".filter-tag").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.similarDatasetQuickFilter = button.dataset.filter;
+          if (state.lastSimilarResult) {
+            renderSimilarResults(state.lastSimilarResult);
+          }
+        });
+      });
+    }
+
+    function getVisibleSimilarResults() {
+      const results = state.lastSimilarResult?.results || [];
+      if (state.similarDatasetQuickFilter === "all") {
+        return results;
+      }
+      return results.filter((item) => item.dataset_id === state.similarDatasetQuickFilter);
+    }
+
+    function formatMultiline(value) {
+      return String(value ?? "-").replaceAll("\n", "<br />");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function renderPillList(items, emptyText = "-") {
+      const rows = Array.isArray(items) ? items.filter(Boolean) : [];
+      if (!rows.length) return emptyText;
+      return rows.map((item) => `<span class="pill">${escapeHtml(item)}</span>`).join("");
+    }
+
+    function renderKeyValueList(mapping, emptyText = "-") {
+      const rows = Object.entries(mapping || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined);
+      if (!rows.length) return emptyText;
+      return rows.map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value)}`).join("<br />");
+    }
+
+    function formatScore(value) {
+      const num = Number(value || 0);
+      return Number.isFinite(num) ? num.toFixed(4) : "0.0000";
+    }
+
+    function summarizeStructuredProfile(profile) {
+      if (!profile || typeof profile !== "object") return "-";
+      const parts = [
+        ["诊断概念", profile.diagnosis_concept_ids],
+        ["症状体征", profile.symptom_ids],
+        ["感染检验", profile.infection_lab_ids],
+        ["血气指标", profile.blood_gas_ids],
+        ["肺功能", profile.pulmonary_function_ids],
+        ["影像表现", profile.imaging_ids],
+        ["药物类别", profile.drug_classes],
+        ["治疗意图", profile.drug_intents],
+        ["支持治疗", profile.support_ids],
+        ["事件", profile.event_ids],
+        ["并发症", profile.complication_ids],
+        ["数值标志", profile.lab_flag_ids],
+      ].filter(([, value]) => Array.isArray(value) && value.length);
+      if (!parts.length) return "-";
+      return parts.map(([label, value]) => `${escapeHtml(label)}: ${renderPillList(value)}`).join("<br />");
+    }
+
+    function summarizeDenoiseReport(report) {
+      if (!report || typeof report !== "object" || !report.applied) return "未启用模板去噪";
+      const stepText = Array.isArray(report.steps) && report.steps.length
+        ? `步骤: ${report.steps.map((item) => escapeHtml(item)).join("，")}`
+        : "步骤: -";
+      const removedRows = Object.entries(report.removed || {})
+        .filter(([, value]) => Array.isArray(value) && value.length)
+        .map(([key, value]) => `${escapeHtml(key)}: ${renderPillList(value)}`);
+      return [
+        report.template ? `模板: ${escapeHtml(report.template)}` : "",
+        stepText,
+        removedRows.length ? `移除项:<br />${removedRows.join("<br />")}` : "移除项: -",
+      ].filter(Boolean).join("<br />");
+    }
+
+    function summarizeDiagnosisMapping(mapping) {
+      if (!mapping || typeof mapping !== "object") return "-";
+      const rows = [
+        mapping.normalized_text ? `标准化诊断: ${escapeHtml(mapping.normalized_text)}` : "",
+        mapping.icd10 ? `ICD-10: ${escapeHtml(mapping.icd10)}` : "",
+        mapping.template ? `模板: ${escapeHtml(mapping.template)}` : "",
+        mapping.family ? `家族: ${escapeHtml(mapping.family)}` : "",
+        mapping.match_method ? `命中方式: ${escapeHtml(mapping.match_method)} (${formatScore(mapping.match_score)})` : "",
+      ].filter(Boolean);
+      return rows.join("<br />") || "-";
+    }
+
+    function summarizeWeightPlan(plan) {
+      if (!plan || typeof plan !== "object") return "-";
+      const weights = Object.entries(plan.normalized_weights || {});
+      if (!weights.length) return "-";
+      const parts = weights.map(([bucket, value]) => `${CHAIN_LABELS[bucket] || bucket}: ${formatScore(value)}`);
+      const prefix = plan.source ? `来源: ${escapeHtml(plan.source)}<br />` : "";
+      return prefix + parts.join("<br />");
+    }
+
+    function renderComponentGrid(item) {
+      const ruleMatch = item.rule_match || {};
+      const diagnosisAlignment = item.diagnosis_alignment || {};
+      const fusionPlan = item.fusion_plan || {};
+      return `
+        <div class="score-grid">
+          <div class="score-card"><b>最终分</b>${formatScore(item.final_score)}</div>
+          <div class="score-card"><b>基础融合分</b>${formatScore(item.base_score)}</div>
+          <div class="score-card"><b>语义分</b>${formatScore(item.semantic_score)}</div>
+          <div class="score-card"><b>结构化分</b>${formatScore(item.structured_score)}</div>
+          <div class="score-card"><b>规则分</b>${formatScore(item.guideline_rule_score)}</div>
+          <div class="score-card"><b>疾病一致性</b>${formatScore(item.disease_consistency_score)}</div>
+          <div class="score-card"><b>诊断层级分</b>${formatScore(item.diagnosis_hierarchy_score)}</div>
+          <div class="score-card"><b>复排分</b>${formatScore(item.rerank_score)}</div>
+        </div>
+        <div class="mini-list">
+          规则命中: ${renderPillList(ruleMatch.shared_rule_ids || [], "未命中")}<br />
+          查询规则: ${renderPillList((ruleMatch.query_rule_hits || []).map((rule) => `${rule.rule_id}:${formatScore(rule.score)}`), "未命中")}<br />
+          候选规则: ${renderPillList((ruleMatch.case_rule_hits || []).map((rule) => `${rule.rule_id}:${formatScore(rule.score)}`), "未命中")}<br />
+          诊断对齐: ${escapeHtml(diagnosisAlignment.match_level || "none")} ${diagnosisAlignment.reason ? `| ${escapeHtml(diagnosisAlignment.reason)}` : ""}<br />
+          融合权重: ${Object.entries(fusionPlan.normalized_weights || {}).map(([key, value]) => `${escapeHtml(key)}=${formatScore(value)}`).join("，") || "-"}
+        </div>
+      `;
+    }
+
+    function renderCompareTable(results) {
+      const thead = document.querySelector("#compareTable thead");
+      const tbody = document.querySelector("#compareTable tbody");
+      if (!results.length) {
+        thead.innerHTML = "";
+        tbody.innerHTML = `<tr><td class="status-muted">暂无对比结果</td></tr>`;
+        return;
+      }
+
+      thead.innerHTML = `
+        <tr>
+          <th>对比项</th>
+          ${results.map((item, idx) => `<th>Top ${idx + 1}<br />${item.case_id}</th>`).join("")}
+        </tr>
+      `;
+
+      const rows = [];
+      rows.push(["所属数据集", ...results.map((item) => item.dataset_label || item.dataset_id || "-")]);
+      rows.push(["主诊断", ...results.map((item) => item.diagnosis || "-")]);
+      rows.push(["标准化诊断", ...results.map((item) => item.normalized_diagnosis || "-")]);
+      rows.push(["基本信息", ...results.map((item) => `${item.gender || "-"} / ${item.age || "-"}`)]);
+      rows.push(["四维链最终评分", ...results.map((item) => item.final_score)]);
+      rows.push(["诊断加分", ...results.map((item) => item.diagnosis_bonus || 0)]);
+      rows.push(["语义分", ...results.map((item) => item.semantic_score || 0)]);
+      rows.push(["结构化分", ...results.map((item) => item.structured_score || 0)]);
+      rows.push(["规则分", ...results.map((item) => item.guideline_rule_score || 0)]);
+      rows.push(["疾病一致性分", ...results.map((item) => item.disease_consistency_score || 0)]);
+      rows.push(["诊断层级分", ...results.map((item) => item.diagnosis_hierarchy_score || 0)]);
+      rows.push(["共享规则命中", ...results.map((item) => (item.rule_match?.shared_rule_ids || []).join("<br />") || "-")]);
+      rows.push(["结构化摘要", ...results.map((item) => summarizeStructuredProfile(item.structured_profile || {}))]);
+      rows.push(["推荐理由", ...results.map((item) => (item.reasons || []).join("<br />"))]);
+      ["history_chain", "evidence_chain", "care_chain", "severity_chain"].forEach((bucket) => {
+        rows.push([
+          `${CHAIN_LABELS[bucket]}评分`,
+          ...results.map((item) => {
+            const score = item.chain_scores?.[bucket];
+            return score ? `最终 ${score.final}<br />Embedding ${score.embedding}<br />Lexical ${score.lexical}` : "-";
+          }),
+        ]);
+        rows.push([
+          CHAIN_LABELS[bucket],
+          ...results.map((item) => (item.chain_overview?.[bucket] || []).map((row) => `${row.relation_type} | ${row.summary || row.hyperedge_id}<br />${formatMultiline(row.evidence_full || row.evidence_preview || "-")}`).join("<hr />") || "-"),
+        ]);
+      });
+
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td><b>${row[0]}</b></td>
+          ${row.slice(1).map((cell) => `<td>${cell}</td>`).join("")}
+        </tr>
+      `).join("");
+    }
+
+    function renderRatingPanel(queryId, item, index) {
+      const ratingKey = buildRatingKey(queryId, item, index);
+      const draft = state.ratingDrafts[ratingKey] || { score: 0, note: "" };
+      return `
+        <div class="rating-panel" data-rating-key="${ratingKey}" data-result-index="${index}">
+          <div class="rating-title">人工评分：请对该推荐结果的相关性打分</div>
+          <div class="rating-buttons">
+            ${[1, 2, 3, 4, 5].map((score) => `
+              <button type="button" class="rating-btn ${draft.score === score ? "active" : ""}" data-score="${score}">${score} 分</button>
+            `).join("")}
+          </div>
+          <textarea class="rating-note" data-rating-note placeholder="可选：填写该推荐结果命中或不命中的原因">${draft.note || ""}</textarea>
+          <div class="similar-actions" style="grid-template-columns:auto 1fr;">
+            <button type="button" data-rating-submit>提交评分</button>
+            <div class="hint" data-rating-status>提交后后台会更新评分统计文档。</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildRatingKey(queryId, item, index) {
+      return [queryId || "manual", index, item.dataset_id || "", item.case_id || ""].join("__");
+    }
+
+    function bindRatingPanels() {
+      document.querySelectorAll(".rating-panel").forEach((panel) => {
+        const ratingKey = panel.dataset.ratingKey;
+        const noteInput = panel.querySelector("[data-rating-note]");
+        panel.querySelectorAll("[data-score]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const score = Number(button.dataset.score || 0);
+            const draft = state.ratingDrafts[ratingKey] || { score: 0, note: "" };
+            draft.score = score;
+            draft.note = noteInput.value;
+            state.ratingDrafts[ratingKey] = draft;
+            panel.querySelectorAll("[data-score]").forEach((target) => {
+              target.classList.toggle("active", target === button);
+            });
+          });
+        });
+        noteInput.addEventListener("input", () => {
+          const draft = state.ratingDrafts[ratingKey] || { score: 0, note: "" };
+          draft.note = noteInput.value;
+          state.ratingDrafts[ratingKey] = draft;
+        });
+        panel.querySelector("[data-rating-submit]").addEventListener("click", async () => {
+          await submitRating(panel);
+        });
+      });
+    }
+
+    async function submitRating(panel) {
+      const resultIndex = Number(panel.dataset.resultIndex || 0);
+      const item = state.currentVisibleSimilarResults[resultIndex];
+      const ratingKey = panel.dataset.ratingKey;
+      const draft = state.ratingDrafts[ratingKey] || { score: 0, note: "" };
+      const statusEl = panel.querySelector("[data-rating-status]");
+      if (!item || !draft.score) {
+        statusEl.textContent = "请先选择 1-5 分后再提交。";
+        return;
+      }
+      statusEl.textContent = "正在提交评分...";
+      const payload = await apiPost("/api/similar-feedback", {
+        query_id: state.lastSimilarResult?.query_id || "",
+        query_text: state.lastSimilarResult?.query_text || "",
+        search_scope: document.getElementById("similarDatasetScopeSelect").value,
+        testset_id: state.selectedTestsetId || "",
+        testset_label: state.testsets.find((item) => item.id === state.selectedTestsetId)?.label || "",
+        query_case_key: state.currentTestcase?.case_key || "",
+        query_case_label: state.currentTestcase?.case_label || "",
+        rank: resultIndex + 1,
+        rated_case_id: item.case_id || "",
+        rated_case_label: item.diagnosis || "",
+        rated_dataset_id: item.dataset_id || "",
+        rated_dataset_label: item.dataset_label || "",
+        final_score: item.final_score || 0,
+        base_score: item.base_score || 0,
+        rerank_score: item.rerank_score || 0,
+        human_score: draft.score,
+        human_note: draft.note || "",
+      });
+      state.feedbackSummary = payload.summary || null;
+      renderFeedbackSummary(state.feedbackSummary);
+      statusEl.textContent = `已提交 ${draft.score} 分，统计文档已更新。`;
+    }
+
+    function renderFeedbackSummary(summary) {
+      const panel = document.getElementById("feedbackSummaryPanel");
+      if (!summary || !summary.total_ratings) {
+        panel.innerHTML = "当前还没有人工评分记录。提交评分后，后台会自动更新统计 JSON 和 Markdown 文档。";
+        return;
+      }
+      const distribution = Object.entries(summary.score_distribution || {}).map(([score, count]) => `${score} 分 ${count} 次`).join(" | ");
+      const topTestsets = (summary.by_testset || []).slice(0, 3).map((item) => `${item.label}: ${item.count} 次 / 均分 ${item.avg_score}`).join("<br />") || "-";
+      panel.innerHTML = `
+        <div><b>人工评分统计摘要</b></div>
+        <div>总评分次数：${summary.total_ratings}，平均分：${summary.avg_score}</div>
+        <div>评分分布：${distribution || "-"}</div>
+        <div style="margin-top:6px;">测试集汇总：<br />${topTestsets}</div>
+        <div style="margin-top:6px;">后台统计文档：<code>validation_reports/similar_feedback/similar_case_feedback_summary.md</code></div>
+      `;
+    }
+
+    async function loadFeedbackSummary() {
+      const payload = await apiGet("/api/similar-feedback-summary");
+      state.feedbackSummary = payload;
+      renderFeedbackSummary(payload);
+    }
+
+    function clearSimilarForm() {
+      setSimilarFieldValue("diagnosis", "");
+      setSimilarFieldValue("history_chain", "");
+      setSimilarFieldValue("evidence_chain", "");
+      setSimilarFieldValue("care_chain", "");
+      setSimilarFieldValue("severity_chain", "");
+      setSimilarFieldValue("extra_note", "");
+      state.currentTestcase = null;
+      resetSimilarEditedState();
+      state.chainDisplayMode.evidence_chain = "full";
+      state.chainDisplayMode.care_chain = "full";
+      updateChainModeButtons();
+      syncAllSimilarTextareas();
+      document.getElementById("testsetHint").textContent = "已清空检索表单，可重新选择测试集病例或手动输入四维链。";
+    }
+
+    function getSimilarFieldMeta() {
+      return {
+        diagnosis: { id: "diagnosisInput" },
+        history_chain: { id: "historyChainInput" },
+        evidence_chain: { id: "evidenceChainInput" },
+        care_chain: { id: "careChainInput" },
+        severity_chain: { id: "severityChainInput" },
+        extra_note: { id: "extraNoteInput" },
+      };
+    }
+
+    function getSimilarFieldElement(field) {
+      const meta = getSimilarFieldMeta()[field];
+      return meta ? document.getElementById(meta.id) : null;
+    }
+
+    function resetSimilarEditedState() {
+      Object.keys(state.similarFormEdited).forEach((key) => {
+        state.similarFormEdited[key] = false;
+      });
+    }
+
+    function setSimilarFieldValue(field, value) {
+      const element = getSimilarFieldElement(field);
+      if (!element) return;
+      state.suppressSimilarInputTracking = true;
+      element.value = value || "";
+      state.suppressSimilarInputTracking = false;
+    }
+
+    function getDisplayedChainValue(detail, field) {
+      if (!detail) return "";
+      const mode = state.chainDisplayMode[field] || "full";
+      if (field === "evidence_chain" || field === "care_chain") {
+        return mode === "preview"
+          ? (detail[`${field}_preview`] || detail[field] || "")
+          : (detail[field] || "");
+      }
+      return detail[field] || "";
+    }
+
+    function updateChainModeButtons() {
+      const buttonConfigs = [
+        ["evidence_chain", "evidenceChainKeyBtn", "evidenceChainFullBtn"],
+        ["care_chain", "careChainKeyBtn", "careChainFullBtn"],
+      ];
+      buttonConfigs.forEach(([field, keyId, fullId]) => {
+        const keyBtn = document.getElementById(keyId);
+        const fullBtn = document.getElementById(fullId);
+        const mode = state.chainDisplayMode[field];
+        keyBtn.classList.toggle("active", mode === "preview");
+        fullBtn.classList.toggle("active", mode === "full");
+      });
+    }
+
+    function applyChainDisplayMode(field) {
+      if (!state.currentTestcase) return;
+      setSimilarFieldValue(field, getDisplayedChainValue(state.currentTestcase, field));
+      syncAllSimilarTextareas();
+      updateChainModeButtons();
+    }
+
+    function getManagedTextareas() {
+      return [
+        { id: "historyChainInput", toggleId: "historyChainToggle", label: "病史链" },
+        { id: "evidenceChainInput", toggleId: "evidenceChainToggle", label: "证据链" },
+        { id: "careChainInput", toggleId: "careChainToggle", label: "诊疗链" },
+        { id: "severityChainInput", toggleId: "severityChainToggle", label: "严重度链" },
+        { id: "extraNoteInput", toggleId: "extraNoteToggle", label: "补充说明" },
+      ];
+    }
+
+    function autoResizeTextarea(textarea) {
+      const collapsedHeight = Number(textarea.dataset.collapsedHeight || 220);
+      const expandedHeight = Number(textarea.dataset.expandedHeight || 560);
+      const isExpanded = textarea.dataset.expanded === "true";
+      textarea.style.height = "auto";
+      const targetHeight = Math.min(textarea.scrollHeight, isExpanded ? expandedHeight : collapsedHeight);
+      textarea.style.height = `${Math.max(targetHeight, 88)}px`;
+      textarea.style.overflowY = textarea.scrollHeight > targetHeight ? "auto" : "hidden";
+    }
+
+    function updateTextareaToggle(textarea, button, label) {
+      const isExpanded = textarea.dataset.expanded === "true";
+      button.textContent = `${isExpanded ? "收起" : "展开"}${label}`;
+    }
+
+    function toggleTextareaExpand(textareaId, toggleId, label) {
+      const textarea = document.getElementById(textareaId);
+      const button = document.getElementById(toggleId);
+      textarea.dataset.expanded = textarea.dataset.expanded === "true" ? "false" : "true";
+      updateTextareaToggle(textarea, button, label);
+      autoResizeTextarea(textarea);
+    }
+
+    function syncAllSimilarTextareas() {
+      getManagedTextareas().forEach(({ id }) => {
+        const textarea = document.getElementById(id);
+        autoResizeTextarea(textarea);
+      });
+    }
+
+    function applyRecommendedScope(scopeHint) {
+      const select = document.getElementById("similarDatasetScopeSelect");
+      if (!scopeHint || scopeHint === "all") return;
+      const matched = Array.from(select.options).some((option) => option.value === scopeHint);
+      if (matched) {
+        select.value = scopeHint;
+      }
+    }
+
+    function fillSimilarForm(detail) {
+      resetSimilarEditedState();
+      state.chainDisplayMode.evidence_chain = "full";
+      state.chainDisplayMode.care_chain = "full";
+      setSimilarFieldValue("diagnosis", detail.diagnosis || "");
+      setSimilarFieldValue("history_chain", detail.history_chain || "");
+      setSimilarFieldValue("evidence_chain", getDisplayedChainValue(detail, "evidence_chain"));
+      setSimilarFieldValue("care_chain", getDisplayedChainValue(detail, "care_chain"));
+      setSimilarFieldValue("severity_chain", detail.severity_chain || "");
+      applyRecommendedScope(detail.scope_hint);
+      setSimilarFieldValue("extra_note", [
+        `测试集: ${detail.testset_label || "-"}`,
+        `文件: ${detail.file_name || "-"}`,
+        `visit_id: ${detail.visit_id || "-"}`,
+        `唯一号: ${detail.unique_id || "-"}`,
+      ].join(" | "));
+      updateChainModeButtons();
+      syncAllSimilarTextareas();
+      document.getElementById("testsetHint").textContent = `已载入测试病例：${detail.case_label}${detail.scope_hint && detail.scope_hint !== "all" ? `，建议检索范围可选 ${detail.scope_hint}` : ""}。`;
+    }
+
+    async function loadTestsets() {
+      const payload = await apiGet("/api/testsets");
+      state.testsets = payload.rows || [];
+      const select = document.getElementById("testsetSelect");
+      select.innerHTML = `<option value="">选择测试集</option>` + state.testsets.map((item) => `
+        <option value="${item.id}">${item.label}${Number.isFinite(item.case_count) ? ` (${item.case_count})` : ""}</option>
+      `).join("");
+    }
+
+    async function handleTestsetChange() {
+      const testsetId = document.getElementById("testsetSelect").value;
+      state.selectedTestsetId = testsetId;
+      state.currentTestcase = null;
+      const caseSelect = document.getElementById("testcaseSelect");
+      if (!testsetId) {
+        caseSelect.disabled = true;
+        caseSelect.innerHTML = `<option value="">选择测试病例</option>`;
+        document.getElementById("testsetHint").textContent = "选择测试集和测试病例后，会自动把四维链信息填充到下方文本框。";
+        return;
+      }
+      const payload = await apiGet(`/api/testset-cases?testset_id=${encodeURIComponent(testsetId)}`);
+      const rows = payload.rows || [];
+      caseSelect.disabled = false;
+      caseSelect.innerHTML = `<option value="">选择测试病例</option>` + rows.map((item) => `
+        <option value="${item.case_key}">${item.case_label}</option>
+      `).join("");
+      document.getElementById("testsetHint").textContent = `已载入测试集 ${payload.testset?.label || testsetId}，请选择一份病例自动填充四维链。`;
+    }
+
+    async function handleTestcaseChange() {
+      const testsetId = document.getElementById("testsetSelect").value;
+      const caseKey = document.getElementById("testcaseSelect").value;
+      if (!testsetId || !caseKey) {
+        return;
+      }
+      const detail = await apiGet(`/api/testset-case?testset_id=${encodeURIComponent(testsetId)}&case_key=${encodeURIComponent(caseKey)}`);
+      state.currentTestcase = detail;
+      fillSimilarForm(detail);
+    }
+
+    async function runSimilarSearch() {
+      const button = document.getElementById("similarSearchBtn");
+      document.getElementById("similarStatus").innerHTML = `<div class="loading">正在检索相似病例，请稍候...</div>`;
+      state.similarDatasetQuickFilter = "all";
+      state.currentVisibleSimilarResults = [];
+      document.getElementById("similarResults").innerHTML = "";
+      document.getElementById("similarResultFilters").innerHTML = "";
+      renderCompareTable([]);
+      button.disabled = true;
+      try {
+        const getSearchFieldValue = (field) => {
+          const element = getSimilarFieldElement(field);
+          if (!element) return "";
+          if (state.currentTestcase && !state.similarFormEdited[field]) {
+            return state.currentTestcase[field] || element.value || "";
+          }
+          return element.value || "";
+        };
+        const payload = await apiPost("/api/similar-cases", {
+          dataset_scope: document.getElementById("similarDatasetScopeSelect").value,
+          diagnosis: getSearchFieldValue("diagnosis"),
+          history_chain: getSearchFieldValue("history_chain"),
+          evidence_chain: getSearchFieldValue("evidence_chain"),
+          care_chain: getSearchFieldValue("care_chain"),
+          severity_chain: getSearchFieldValue("severity_chain"),
+          extra_note: getSearchFieldValue("extra_note"),
+          top_k: Number(document.getElementById("topKInput").value || 5),
+        });
+        renderSimilarResults(payload);
+      } catch (error) {
+        document.getElementById("similarStatus").innerHTML = `
+          <div class="similar-status-card">
+            <b>检索失败</b>
+            <div class="similar-status-content">${error.message || error}</div>
+          </div>
+        `;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function downloadBlob(filename, mime, content) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson(filename, payload) {
+      downloadBlob(filename, "application/json;charset=utf-8", JSON.stringify(payload, null, 2));
+    }
+
+    function exportWord(filename, title, htmlBody) {
+      const content = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+        <head><meta charset="utf-8"><title>${title}</title></head>
+        <body><h1>${title}</h1>${htmlBody}</body></html>
+      `;
+      downloadBlob(filename, "application/msword", content);
+    }
+
+    function exportExcel(filename, title, tableHtml) {
+      const content = `
+        <html><head><meta charset="utf-8"></head><body>
+        <h2>${title}</h2>${tableHtml}
+        </body></html>
+      `;
+      downloadBlob(filename, "application/vnd.ms-excel", content);
+    }
+
+    function bindExports() {
+      document.getElementById("exportCaseJsonBtn").addEventListener("click", () => {
+        if (!state.currentCaseDetail) return;
+        exportJson(`${state.dataset}_${state.currentCaseDetail.case_id}.json`, state.currentCaseDetail);
+      });
+      document.getElementById("exportCaseWordBtn").addEventListener("click", () => {
+        if (!state.currentCaseDetail) return;
+        exportWord(
+          `${state.dataset}_${state.currentCaseDetail.case_id}.doc`,
+          `病例详情_${state.currentCaseDetail.case_id}`,
+          document.getElementById("caseDetailPanel").innerHTML
+        );
+      });
+      document.getElementById("exportCaseExcelBtn").addEventListener("click", () => {
+        if (!state.currentCaseDetail) return;
+        const rows = Object.entries(state.currentCaseDetail.relation_type_counts || {}).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+        exportExcel(
+          `${state.dataset}_${state.currentCaseDetail.case_id}.xls`,
+          `病例详情_${state.currentCaseDetail.case_id}`,
+          `<table border="1"><tr><th>关系类型</th><th>数量</th></tr>${rows}</table>`
+        );
+      });
+      document.getElementById("exportCompareJsonBtn").addEventListener("click", () => {
+        if (!state.lastSimilarResult) return;
+        exportJson(`${state.dataset}_similar_top5.json`, state.lastSimilarResult);
+      });
+      document.getElementById("exportCompareWordBtn").addEventListener("click", () => {
+        if (!state.lastSimilarResult) return;
+        exportWord(
+          `${state.dataset}_similar_top5.doc`,
+          `相似病例对比_${state.dataset}`,
+          document.getElementById("similarResults").innerHTML + document.querySelector(".compare-scroll").innerHTML
+        );
+      });
+      document.getElementById("exportCompareExcelBtn").addEventListener("click", () => {
+        if (!state.lastSimilarResult) return;
+        exportExcel(
+          `${state.dataset}_similar_top5.xls`,
+          `相似病例对比_${state.dataset}`,
+          document.getElementById("compareTable").outerHTML
+        );
+      });
+    }
+
+    function bindGraphEvents() {
+      canvas.addEventListener("mousedown", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const node = findNodeAt(x, y);
+        state.lastPointer = { x, y };
+        if (node) {
+          state.dragNodeId = node.id;
+          state.graph.selectedNode = node;
+          state.graph.selectedEdge = null;
+          renderGraphDetail(node, "node");
+        } else {
+          state.panning = true;
+          const edge = findEdgeAt(x, y);
+          state.graph.selectedEdge = edge;
+          state.graph.selectedNode = null;
+          renderGraphDetail(edge, edge ? "edge" : "");
+        }
+        canvas.classList.add("dragging");
+        drawGraph();
+      });
+
+      canvas.addEventListener("mousemove", (event) => {
+        if (!state.lastPointer) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const dx = x - state.lastPointer.x;
+        const dy = y - state.lastPointer.y;
+        state.lastPointer = { x, y };
+        if (state.dragNodeId) {
+          const node = state.graph.nodeMap.get(state.dragNodeId);
+          if (node) {
+            const world = screenToWorld(x, y);
+            node.x = world.x;
+            node.y = world.y;
+            drawGraph();
+          }
+        } else if (state.panning) {
+          state.graph.offsetX += dx;
+          state.graph.offsetY += dy;
+          drawGraph();
+        }
+      });
+
+      window.addEventListener("mouseup", () => {
+        state.dragNodeId = null;
+        state.panning = false;
+        state.lastPointer = null;
+        canvas.classList.remove("dragging");
+      });
+
+      canvas.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const before = screenToWorld(x, y);
+        state.graph.scale = Math.max(60, Math.min(520, state.graph.scale * (event.deltaY < 0 ? 1.08 : 0.92)));
+        const after = screenToWorld(x, y);
+        state.graph.offsetX += (after.x - before.x) * state.graph.scale;
+        state.graph.offsetY += (after.y - before.y) * state.graph.scale;
+        drawGraph();
+      }, { passive: false });
+
+      canvas.addEventListener("dblclick", async (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const node = findNodeAt(event.clientX - rect.left, event.clientY - rect.top);
+        if (node) {
+          await expandGraph(node.id);
+          state.graph.selectedNode = node;
+          renderGraphDetail(node, "node");
+        }
+      });
+    }
+
+    function bindUI() {
+      document.querySelectorAll(".tab-btn").forEach((btn) => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+      document.getElementById("datasetSelect").addEventListener("change", async (event) => {
+        state.dataset = event.target.value;
+        await initializeDataset();
+      });
+      getManagedTextareas().forEach(({ id, toggleId, label }) => {
+        const textarea = document.getElementById(id);
+        const button = document.getElementById(toggleId);
+        textarea.dataset.expanded = "false";
+        textarea.dataset.collapsedHeight = id === "extraNoteInput" ? "160" : "220";
+        textarea.dataset.expandedHeight = id === "extraNoteInput" ? "320" : "560";
+        textarea.addEventListener("input", () => {
+          autoResizeTextarea(textarea);
+          if (state.suppressSimilarInputTracking) return;
+          const field = Object.entries(getSimilarFieldMeta()).find(([, meta]) => meta.id === id)?.[0];
+          if (field) {
+            state.similarFormEdited[field] = true;
+          }
+        });
+        button.addEventListener("click", () => toggleTextareaExpand(id, toggleId, label));
+        updateTextareaToggle(textarea, button, label);
+        autoResizeTextarea(textarea);
+      });
+      document.getElementById("evidenceChainKeyBtn").addEventListener("click", () => {
+        state.chainDisplayMode.evidence_chain = "preview";
+        applyChainDisplayMode("evidence_chain");
+      });
+      document.getElementById("evidenceChainFullBtn").addEventListener("click", () => {
+        state.chainDisplayMode.evidence_chain = "full";
+        applyChainDisplayMode("evidence_chain");
+      });
+      document.getElementById("careChainKeyBtn").addEventListener("click", () => {
+        state.chainDisplayMode.care_chain = "preview";
+        applyChainDisplayMode("care_chain");
+      });
+      document.getElementById("careChainFullBtn").addEventListener("click", () => {
+        state.chainDisplayMode.care_chain = "full";
+        applyChainDisplayMode("care_chain");
+      });
+      updateChainModeButtons();
+      document.getElementById("testsetSelect").addEventListener("change", handleTestsetChange);
+      document.getElementById("testcaseSelect").addEventListener("change", handleTestcaseChange);
+      document.getElementById("clearSimilarFormBtn").addEventListener("click", clearSimilarForm);
+      document.getElementById("refreshFeedbackSummaryBtn").addEventListener("click", loadFeedbackSummary);
+      document.getElementById("graphSearchBtn").addEventListener("click", async () => {
+        const query = document.getElementById("nodeSearchInput").value.trim();
+        if (!query) return;
+        await expandGraph(query);
+      });
+      document.getElementById("graphLoadSampleBtn").addEventListener("click", loadGraphSample);
+      document.getElementById("graphClearBtn").addEventListener("click", async () => {
+        await loadGraphSample();
+      });
+      document.getElementById("graphFitBtn").addEventListener("click", () => {
+        fitGraphView();
+        drawGraph();
+      });
+      document.getElementById("nodeSearchInput").addEventListener("input", (event) => {
+        const value = event.target.value.trim();
+        if (value.length >= 2) searchNodes(value);
+        else document.getElementById("nodeResults").innerHTML = "";
+      });
+      document.getElementById("caseFilterInput").addEventListener("input", (event) => filterCases(event.target.value));
+      document.getElementById("similarSearchBtn").addEventListener("click", runSimilarSearch);
+      window.addEventListener("resize", setCanvasSize);
+      bindExports();
+      bindGraphEvents();
+    }
+
+    async function initializeDataset() {
+      await loadMetaAndDatasetSwitch();
+      await Promise.all([loadGraphSample(), loadCases()]);
+      renderGraphDetail(null, "");
+      setCanvasSize();
+      syncAllSimilarTextareas();
+      document.getElementById("similarResults").innerHTML = "";
+      document.getElementById("similarStatus").innerHTML = "提交查询后，这里会展示检索策略、推荐结果和 Top 5 四维链对比。";
+      renderCompareTable([]);
+      state.lastSimilarResult = null;
+      state.currentVisibleSimilarResults = [];
+    }
+
+    async function init() {
+      bindUI();
+      await Promise.all([initializeDataset(), loadTestsets(), loadFeedbackSummary()]);
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Local experiment artifacts
+*.log
+*.pkl
+*.jsonl
+
+# Notebook / editor
+.ipynb_checkpoints/
+.DS_Store
+
+# Generated figures and outputs
+outputs/
+results/*
+!results/paper_supplements/
+!results/paper_supplements/**
+!results/final/
+!results/final/**
+figures/

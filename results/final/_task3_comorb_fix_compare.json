@@ -1,0 +1,21 @@
+{
+  "task3_component_blind": {
+    "before_fix": {
+      "mae": 0.116,
+      "rmse": 0.1431,
+      "r2": 0.3831,
+      "r2_sd": 0.1146,
+      "pearson": 0.6401,
+      "n_features": 205
+    },
+    "after_fix": {
+      "mae": 0.1156,
+      "rmse": 0.1456,
+      "r2": 0.3764,
+      "r2_sd": 0.1141,
+      "pearson": 0.6332,
+      "n_features": 205
+    }
+  },
+  "note": "合并症修复仅改变 CSCS 目标(label)，component-blind 输入(205维)不变。⚠️ pre-audit: 此处 before/after 的 R²(0.383/0.376) 均为 205 维泄漏口径的表观值（未扣 28 个 severity 派生图统计量），非论文 corrected component-blind 结果（R²≈-0.013，见 _task3_true_cb_flat_compare.json 与 _task3_sev_graph_leak.json）。"
+}

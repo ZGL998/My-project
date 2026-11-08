@@ -1,0 +1,194 @@
+{
+  "task_results": {
+    "external_n": 30,
+    "class_counts": {
+      "0": 10,
+      "1": 10,
+      "2": 10
+    },
+    "4d_xgb": {
+      "cls": {
+        "accuracy": 0.4666666666666667,
+        "precision_weighted": 0.5611111111111112,
+        "recall_weighted": 0.4666666666666667,
+        "macro_f1": 0.4591269841269841,
+        "weighted_f1": 0.45912698412698416
+      },
+      "bin": {
+        "auc_roc": 0.8999999999999999,
+        "auc_pr": 0.9401492309290298,
+        "sensitivity": 0.95,
+        "specificity": 0.4
+      }
+    },
+    "lr_xgboost": {
+      "cls": {
+        "accuracy": 0.5333333333333333,
+        "precision_weighted": 0.5871794871794872,
+        "recall_weighted": 0.5333333333333333,
+        "macro_f1": 0.5335090030742204,
+        "weighted_f1": 0.5335090030742204
+      },
+      "bin": {
+        "auc_roc": 0.83,
+        "auc_pr": 0.8400520607495893,
+        "sensitivity": 0.95,
+        "specificity": 0.3
+      }
+    },
+    "cases": [
+      {
+        "pid": "CASE_038F6147B4F9",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_0516ADDB8A70",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_06637C5F3AF2",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_0A414E61C03D",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_0C4C6AE02B7D",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_10AC963FAB8B",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_20922502457A",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_2738B2F9DD62",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_2A309396AEA2",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_2FE057A6CA0D",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_30EAB8E8794B",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_4221C38FC406",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_49400E6D41FA",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_5459C07C9651",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_560996FA799E",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_63605B2E51E1",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_699882154D36",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_71DB80E0B653",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_7369DF254822",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_7BA04BAE3596",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_81A97A2DCED8",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_824F4042D77D",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_82B1F63BD4C4",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_964E16D584A6",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_9801593EEE5B",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_9B7D91D4B399",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      },
+      {
+        "pid": "CASE_B1D7BBEDA1CF",
+        "diag": "慢性阻塞性肺疾病伴急性下呼吸道感染",
+        "label3": 2
+      },
+      {
+        "pid": "CASE_E239ADED1934",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_E6F660099544",
+        "diag": "慢性阻塞性肺疾病急性加重",
+        "label3": 1
+      },
+      {
+        "pid": "CASE_F44C75FDB7BD",
+        "diag": "慢性阻塞性肺疾病",
+        "label3": 0
+      }
+    ]
+  },
+  "external_folder": "/home/pumc/呼吸疾病/超图实验/core30_4d_reextract_prep/external_chain_eval_input",
+  "note": "external validation：训练集全量拟合，外部四维链 COPD 三类病例验证；当前仅支持 4D-XGB 与 LR/XGBoost"
+}
